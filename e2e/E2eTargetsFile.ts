@@ -21,9 +21,9 @@ const E2eTargetDefinitionSchema = z
       .optional(),
     /** Where the site's OpenAPI 3 JSON document is, as a path from the site's root; the usual addresses are tried when absent. */
     apiSpecPath: z.string().optional(),
-    /** Whether an API run serves the bundled demo API at `baseUrl` for the length of the run; false when absent. */
+    /** Whether a run serves the bundled demo API at `baseUrl` for the length of the run; false when absent. */
     servesDemoApi: z.boolean().optional(),
-    /** Whether a site run serves the bundled demo site at `baseUrl` for the length of the run; false when absent. */
+    /** Whether a run serves the bundled demo site, pages and API, at `baseUrl` for the length of the run; false when absent. */
     servesDemoSite: z.boolean().optional(),
     /** The API checks known to fail on this site, each an operation's path as its document writes it and the check; none when absent. */
     expectedApiFailures: z

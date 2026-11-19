@@ -1,6 +1,7 @@
 import type { Server } from 'node:http'
 import { createFixedAnswerServer } from './createFixedAnswerServer.ts'
 import type { DemoAnswer } from './DemoAnswer.ts'
+import { demoApiAnswers } from './demoApiAnswers.ts'
 
 interface DemoPage {
   readonly title: string
@@ -57,7 +58,10 @@ const html = (status: number, page: DemoPage): DemoAnswer => ({
       <h1>${page.heading}</h1>
       ${page.content}
     </main>
-    <footer><p>The Tide Library is a demo site: fixed pages, nothing to sign in to.</p></footer>
+    <footer>
+      <p>The Tide Library is a demo site: fixed pages, nothing to sign in to. Its catalogue is
+        also an API, described by <a href="/openapi.json">its OpenAPI document</a>.</p>
+    </footer>
   </body>
 </html>
 `
@@ -70,8 +74,10 @@ const NOT_FOUND = html(404, {
   content: '<p>Nothing is at this address. <a href="/">Return to the home page</a>.</p>'
 })
 
-// What each address answers: three pages that link to one another, and the files they load.
+// What each address answers: three pages that link to one another, the files they load, and the
+// demo API with its OpenAPI document.
 const ANSWERS: Readonly<Record<string, DemoAnswer>> = {
+  ...demoApiAnswers,
   '/': html(200, {
     title: 'The Tide Library',
     description: 'A small library by the sea, with a short shelf of books about weather and water.',
@@ -120,7 +126,7 @@ const READ_ONLY: DemoAnswer = {
   body: 'The demo site is read-only.'
 }
 
-// The demo library site: fixed pages that pass every page check, read-only, and no state between
-// requests. The caller chooses the port with `listen`.
+// The demo library site: fixed pages that pass every page check, and the demo API beside them.
+// Read-only, with no state between requests. The caller chooses the port with `listen`.
 export const createDemoSiteServer = (): Server =>
   createFixedAnswerServer(ANSWERS, NOT_FOUND, READ_ONLY)

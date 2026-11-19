@@ -12,6 +12,7 @@ run.
 ## Running it
 
 ```bash
+npm run test:api-playwright             # the defaultTarget in targets.json: the bundled demo site
 npm run test:api-playwright demo-api    # the bundled demo API
 npm run test:api-playwright staging     # the target named "staging"
 ```
@@ -19,8 +20,7 @@ npm run test:api-playwright staging     # the target named "staging"
 Arguments after the target pass to `playwright test`, as in the site suite:
 `npm run test:api-playwright -- staging -g "/books"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
-site suite's do. A run without a target name uses the `defaultTarget`, the demo site, which
-publishes no document. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site
+site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site
 does not answer (a certificate the run does not accept is named as that), it offers no document, the document has no operation a run can request, or an expected failure names an
 operation the run does not request; `2` the run was refused before it started.
 
@@ -49,6 +49,8 @@ The `demo-api` target sets `servesDemoApi`, so the one command does the whole ru
 
 The run prints `the demo API is running at …` and `the demo API has shut down` around the tests.
 A port something else holds stops the run with the reason before any test starts.
+The [demo site](e2e-playwright.md#the-demo-site), the `defaultTarget`, serves the same API and
+document beside its pages, so `npm run test:api-playwright` with no target gives the same result.
 `npm run serve:demo-api` serves the same API until stopped, to explore it by hand; stop it before
 an API run against `demo-api`, which needs the port.
 

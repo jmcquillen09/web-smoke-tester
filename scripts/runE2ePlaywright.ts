@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 // `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: runs `playwright test`
-// on the pages found on the target's site, serving the demo site when the target asks.
+// on the pages found on the target's site, serving a demo server when the target asks.
 
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { demoSite } from '../demo/demoSite.ts'
-import { withDemoServer } from '../demo/withDemoServer.ts'
+import { withTargetDemoServer } from '../demo/withTargetDemoServer.ts'
 import { BROWSER_VARIABLE, SITE_PAGES_VARIABLE, TARGET_VARIABLE } from '../e2e/constants.ts'
 import { discoverSitePages } from '../e2e/discoverSitePages.ts'
 import { fetchPageHtml } from '../e2e/fetchPageHtml.ts'
@@ -59,10 +58,8 @@ const runSiteTests = async (): Promise<ChildOutcome> => {
 }
 
 try {
-  // With a demo site, the process ends only once it has shut down, so nothing is left on the port.
-  const outcome = settings.servesDemoSite
-    ? await withDemoServer(demoSite, settings.baseUrl, log, runSiteTests)
-    : await runSiteTests()
+  // With a demo server, the process ends only once it has shut down, so nothing is left on the port.
+  const outcome = await withTargetDemoServer(settings, log, runSiteTests)
   if (outcome.kind === 'signalled') process.kill(process.pid, outcome.signal)
   process.exit(outcome.kind === 'exited' ? outcome.code : 1)
 } catch (error) {

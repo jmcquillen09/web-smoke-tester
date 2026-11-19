@@ -3,7 +3,12 @@
   "targets": {
     "demo-site": {
       "baseUrl": "http://localhost:4020",
-      "servesDemoSite": true
+      "servesDemoSite": true,
+      "expectedApiFailures": [
+        { "path": "/authors", "check": "contentType" },
+        { "path": "/authors/{authorId}", "check": "status" },
+        { "path": "/stats", "check": "status" }
+      ]
     },
     "example": {
       "baseUrl": "https://example.com"

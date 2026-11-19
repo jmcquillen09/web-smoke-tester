@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 // `npm run test:api-playwright [target] [args...]`: runs the `api` project of `playwright test` on
-// the GET operations of the target's OpenAPI document, serving the demo API when the target asks.
+// the GET operations of the target's OpenAPI document, serving a demo server when the target asks.
 
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { demoApi } from '../demo/demoApi.ts'
-import { withDemoServer } from '../demo/withDemoServer.ts'
+import { withTargetDemoServer } from '../demo/withTargetDemoServer.ts'
 import { assertExpectedApiFailuresPlanned } from '../e2e/assertExpectedApiFailuresPlanned.ts'
 import { assertSiteAnswers } from '../e2e/assertSiteAnswers.ts'
 import { API_OPERATIONS_VARIABLE, API_PROJECT, TARGET_VARIABLE } from '../e2e/constants.ts'
@@ -70,10 +69,8 @@ const runApiTests = async (): Promise<ChildOutcome> => {
 }
 
 try {
-  // With a demo API, the process ends only once it has shut down, so nothing is left on the port.
-  const outcome = settings.servesDemoApi
-    ? await withDemoServer(demoApi, settings.baseUrl, log, runApiTests)
-    : await runApiTests()
+  // With a demo server, the process ends only once it has shut down, so nothing is left on the port.
+  const outcome = await withTargetDemoServer(settings, log, runApiTests)
   if (outcome.kind === 'signalled') process.kill(process.pid, outcome.signal)
   process.exit(outcome.kind === 'exited' ? outcome.code : 1)
 } catch (error) {
