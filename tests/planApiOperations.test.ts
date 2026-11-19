@@ -202,3 +202,133 @@ void test('operations past the run’s limit are skipped, in the document’s or
   )
   assert.deepEqual(plan.skipped, [{ path: '/c', reason: 'a run tests at most 2 operations' }])
 })
+
+void test('a path’s or an operation’s own servers replace the document’s', () => {
+  const document = documentWith(
+    {
+      '/pets': { get: { responses: OK_JSON } },
+      '/orders': { servers: [{ url: '/v2' }], get: { responses: OK_JSON } },
+      '/users': {
+        servers: [{ url: '/v2' }],
+        get: { servers: [{ url: '/v3' }], responses: OK_JSON }
+      },
+      '/elsewhere': { get: { servers: [{ url: 'https://other.example' }], responses: OK_JSON } }
+    },
+    { servers: [{ url: '/v1' }] }
+  )
+
+  const plan = planApiOperations(document, DOCUMENT_URL)
+
+  assert.deepEqual(
+    plan.operations.map((operation) => operation.url),
+    ['https://api.example/v1/pets', 'https://api.example/v2/orders', 'https://api.example/v3/users']
+  )
+  assert.deepEqual(plan.skipped, [
+    {
+      path: '/elsewhere',
+      reason: "the document's server https://other.example is another site than the document's"
+    }
+  ])
+})
+
+void test('an operation that accepts a request without credentials is not secured', () => {
+  const document = documentWith({
+    '/either': { get: { security: [{}, { apiKey: [] }], responses: OK_JSON } },
+    '/both': { get: { security: [{ apiKey: [] }, { oauth: ['read'] }], responses: OK_JSON } }
+  })
+
+  const secured = planApiOperations(document, DOCUMENT_URL).operations.map(
+    (operation) => [operation.path, operation.secured] as const
+  )
+
+  assert.deepEqual(secured, [
+    ['/either', false],
+    ['/both', true]
+  ])
+})
+
+void test('a path that names another site is never requested', () => {
+  const document = documentWith({
+    '//other.example/data': { get: { responses: OK_JSON } },
+    '/\\other.example/data': { get: { responses: OK_JSON } },
+    pets: { get: { responses: OK_JSON } }
+  })
+
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL), {
+    operations: [],
+    skipped: [
+      { path: '//other.example/data', reason: 'its path does not start with one "/"' },
+      {
+        path: '/\\other.example/data',
+        reason: 'its address https://other.example/data is on another site than its server'
+      },
+      { path: 'pets', reason: 'its path does not start with one "/"' }
+    ]
+  })
+})
+
+void test('an address that example values or the server make unsafe is never requested', () => {
+  const document = documentWith({
+    '/session/{action}': {
+      get: {
+        parameters: [{ name: 'action', in: 'path', required: true, example: 'logout' }],
+        responses: OK_JSON
+      }
+    },
+    '/items': {
+      get: {
+        parameters: [{ name: 'action', in: 'query', required: true, example: 'delete' }],
+        responses: OK_JSON
+      }
+    },
+    '/accounts': { servers: [{ url: '/unsubscribe' }], get: { responses: OK_JSON } }
+  })
+
+  const reason = 'its address suggests it ends a session or changes data'
+
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL), {
+    operations: [],
+    skipped: [
+      { path: '/session/{action}', reason },
+      { path: '/items', reason },
+      { path: '/accounts', reason }
+    ]
+  })
+})
+
+void test('an operation that requires a query API key is skipped, example value or not', () => {
+  const document = documentWith(
+    {
+      '/reports': {
+        get: {
+          parameters: [{ name: 'api_key', in: 'query', required: true, example: 'secret-key' }],
+          responses: OK_JSON
+        }
+      },
+      '/pets': {
+        get: {
+          parameters: [{ name: 'api_key', in: 'query', example: 'secret-key' }],
+          responses: OK_JSON
+        }
+      }
+    },
+    {
+      components: {
+        securitySchemes: {
+          key: { type: 'apiKey', in: 'query', name: 'api_key' },
+          session: { type: 'http' }
+        }
+      }
+    }
+  )
+
+  const plan = planApiOperations(document, DOCUMENT_URL)
+
+  assert.deepEqual(
+    plan.operations.map((operation) => operation.url),
+    ['https://api.example/pets']
+  )
+  assert.deepEqual(plan.skipped, [
+    { path: '/reports', reason: 'it requires the credential query parameter "api_key"' }
+  ])
+})

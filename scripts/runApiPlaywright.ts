@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// `npm run test:api-playwright [target] [args...]`: finds the target's OpenAPI document, plans its
-// GET operations into E2E_API_OPERATIONS, and runs the `api` project of `playwright test`. For a
-// target that sets `servesDemoApi`, it serves the demo API for the length of the run.
+// `npm run test:api-playwright [target] [args...]`: runs the `api` project of `playwright test` on
+// the GET operations of the target's OpenAPI document, serving the demo API when the target asks.
 
 import { createRequire } from 'node:module'
 import path from 'node:path'

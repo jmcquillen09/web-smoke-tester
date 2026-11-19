@@ -1,6 +1,7 @@
 import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS } from './constants.ts'
 import { assertRunnableTarget } from './assertRunnableTarget.ts'
 import type { E2eTargetSettings } from './E2eTargetSettings.ts'
+import { isSitePath } from './isSitePath.ts'
 import type { E2eTargetsFile } from './E2eTargetsFile.ts'
 import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
 
@@ -31,8 +32,8 @@ const assertDemoApiUrl = (name: string, siteUrl: URL): void => {
 }
 
 const assertSitePath = (name: string, path: string): void => {
-  const isSitePath = path.startsWith('/') && !path.startsWith('//')
-  if (!isSitePath) {
+  const hasSitePath = isSitePath(path)
+  if (!hasSitePath) {
     throw new E2eConfigurationError(
       `The ${name} target's path "${path}" must start with one "/", as a path from the site's root.`
     )

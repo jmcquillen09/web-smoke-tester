@@ -7,14 +7,14 @@ const isDeclaredContentType = (contentType: string, declared: string): boolean =
   const [declaredMediaType = ''] = declared.toLowerCase().split(';')
   const [declaredType = '', declaredSubtype = ''] = declaredMediaType.trim().split('/')
   const [type = '', subtype = ''] = contentType.split('/')
+  const hasMediaType = type !== '' && subtype !== ''
   const isSameType = declaredType === '*' || declaredType === type
   const isSameSubtype = declaredSubtype === '*' || declaredSubtype === subtype
-  return isSameType && isSameSubtype
+  return hasMediaType && isSameType && isSameSubtype
 }
 
-// What is wrong with an answer's content type, one line each, empty when nothing is: the document
-// declares body types for the answered status and the answer's is none of them. A status the
-// document does not declare is the status check's finding, not this one's.
+// The answer's content type when it is none the document declares for the answered status, as one
+// line. A status the document does not declare is the status check's finding, not this one's.
 export const findApiContentTypeProblems = (answer: ApiAnswer): string[] => {
   const declaredTypes = findDeclaredApiResponse(answer.operation, answer.status)?.contentTypes ?? []
   const declaresBody = declaredTypes.length > 0

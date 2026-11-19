@@ -2,9 +2,8 @@ import { HTTP_SERVER_ERROR_STATUS, HTTP_UNAUTHENTICATED_STATUSES } from '../cons
 import type { ApiAnswer } from './ApiAnswer.ts'
 import { findDeclaredApiResponse } from './findDeclaredApiResponse.ts'
 
-// What is wrong with an answer's status, one line each, empty when nothing is: a server error, or a
-// status the document does not declare. An operation the document marks as secured may also refuse
-// a run, which sends no credentials.
+// The answer's status when it is a server error or one the document does not declare, as one line.
+// An operation the document marks as secured may also refuse a run, which sends no credentials.
 export const findApiStatusProblems = (answer: ApiAnswer): string[] => {
   const isServerError = answer.status >= HTTP_SERVER_ERROR_STATUS
   if (isServerError) return [`answered HTTP ${String(answer.status)}, a server error`]

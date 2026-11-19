@@ -107,22 +107,28 @@ document ([`e2e/discoverOpenApiDocument.ts`](../e2e/discoverOpenApiDocument.ts))
 
 A document is OpenAPI 3 in JSON, served from the target's own site
 ([`e2e/fetchOpenApiDocument.ts`](../e2e/fetchOpenApiDocument.ts)). A Swagger 2.0 document, a YAML
-document and a redirect to another site are each no document.
+document and a redirect to another site are each no document. A redirect is followed only on the
+same site and never to an address `UNSAFE_LINK` matches
+([`e2e/fetchSiteText.ts`](../e2e/fetchSiteText.ts)).
 
 ## Which operations a run requests
 
 [`e2e/planApiOperations.ts`](../e2e/planApiOperations.ts) turns the document into requests:
 
 - **`GET` operations only**, at most `API_OPERATION_LIMIT` of them, in the document's order.
-- **On the document's own site.** The address is the document's first `servers` entry (its own
-  site's root when it has none) plus the path. A server on another site, or one with variables,
-  skips every operation.
+- **On the document's own site.** The address is the first `servers` entry that applies (the
+  operation's, then its path's, then the document's; the document's own site's root when there is
+  none) plus the path. A server on another site, one with variables, and a path that resolves to
+  another site each skip the operation.
 - **Required path and query parameters take the document's own values**: the parameter's
   `example`, then its schema's `example`, `default` and first `enum` value. Optional parameters are
   left out. A required parameter with no such value, and a required header or cookie parameter,
   skip the operation.
-- **A path `UNSAFE_LINK` matches is never requested** (`logout`, `delete` and the like), as in
-  every other check.
+- **No credentials, even ones the document offers.** A required query parameter that one of the
+  document's `apiKey` security schemes names skips the operation, whatever example it carries.
+- **An address `UNSAFE_LINK` matches is never requested** (`logout`, `delete` and the like), as in
+  every other check. The path is judged as the document writes it and again as the address a run
+  would request, with its server prefix and example values filled in.
 - **`$ref` is followed for parameters and responses** under the document's `components`; any other
   `$ref` there skips the operation.
 
@@ -140,7 +146,12 @@ run in the `api` Playwright project.
 | `documentedContentType.spec.ts` | `CheckApiContentTypeStage` | the document declares body content types for the answered status and the answer's is none of them, counting a declared range (`application/*`) as a match |
 
 - **An operation the document marks as secured may answer 401 or 403**: a run sends no credentials,
-  so that refusal is the documented behaviour, whether or not the document lists the status.
+  so that refusal is the documented behaviour, whether or not the document lists the status. An
+  operation whose `security` offers an empty alternative accepts a request without credentials, so
+  it is not secured.
+- **A redirect is the operation's answer.** A run never requests where it leads, so a `3XX` status
+  is judged against the document like any other.
+- **An answer that names no content type** matches no declared type, a range such as `*/*` included.
 - **A server error fails even when the document declares it.** A plain `GET` built from the
   document's own examples is a request the server is expected to handle.
 - **An operation that never answers is a setup failure** (`E2eFixtureError`), not a failed check.

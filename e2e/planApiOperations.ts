@@ -1,5 +1,6 @@
 import type { ApiOperation } from './ApiOperation.ts'
 import { API_OPERATION_LIMIT, UNSAFE_LINK } from './constants.ts'
+import { isSitePath } from './isSitePath.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
 
 export interface ApiOperationPlan {
@@ -8,24 +9,31 @@ export interface ApiOperationPlan {
   readonly skipped: readonly { readonly path: string; readonly reason: string }[]
 }
 
-type Planned<T> =
-  | { readonly kind: 'planned'; readonly value: T }
-  | { readonly kind: 'skipped'; readonly reason: string }
+interface PlannedValue<T> {
+  readonly kind: 'planned'
+  readonly value: T
+}
+interface SkippedValue {
+  readonly kind: 'skipped'
+  readonly reason: string
+}
+type Planned<T> = PlannedValue<T> | SkippedValue
 
 type OpenApiPathItem = OpenApiDocument['paths'][string]
 type OpenApiOperation = NonNullable<OpenApiPathItem['get']>
 type OpenApiComponents = NonNullable<OpenApiDocument['components']>
 type OpenApiParameter = NonNullable<OpenApiComponents['parameters']>[string]
 type OpenApiResponse = NonNullable<OpenApiComponents['responses']>[string]
+type OpenApiServers = OpenApiDocument['servers']
 
 const PARAMETER_REFERENCE = '#/components/parameters/'
 const RESPONSE_REFERENCE = '#/components/responses/'
 
+const API_KEY_SCHEME = 'apiKey'
+
 const planned = <T>(value: T): Planned<T> => ({ kind: 'planned', value })
-const skipped = (reason: string): { readonly kind: 'skipped'; readonly reason: string } => ({
-  kind: 'skipped',
-  reason
-})
+const skipped = (reason: string): SkippedValue => ({ kind: 'skipped', reason })
+const isPlanned = <T>(plan: Planned<T>): plan is PlannedValue<T> => plan.kind === 'planned'
 
 // The component a `$ref` names, or undefined when it points anywhere but that components section.
 const resolveComponent = <T>(
@@ -37,8 +45,9 @@ const resolveComponent = <T>(
   return Object.hasOwn(components, name) ? components[name] : undefined
 }
 
-const planServer = (document: OpenApiDocument, documentUrl: string): Planned<URL> => {
-  const address = document.servers?.[0]?.url ?? '/'
+// The server an operation is requested on: the first of the servers that apply to it.
+const planServer = (servers: OpenApiServers, documentUrl: string): Planned<URL> => {
+  const address = servers?.[0]?.url ?? '/'
   const hasVariables = address.includes('{')
   if (hasVariables) return skipped(`the document's server address ${address} has variables`)
   const isUrl = URL.canParse(address, documentUrl)
@@ -76,12 +85,20 @@ const exampleOf = (parameter: OpenApiParameter): string | number | boolean | und
   parameter.schema?.default ??
   parameter.schema?.enum?.[0]
 
-// The address to request: required path and query parameters take the document's own example
-// values, and optional parameters are left out.
+// The query parameters that carry a credential: the names of the document's query API keys.
+const credentialQueryNamesOf = (document: OpenApiDocument): ReadonlySet<string> =>
+  new Set(
+    Object.values(document.components?.securitySchemes ?? {})
+      .filter((scheme) => scheme.type === API_KEY_SCHEME && scheme.in === 'query')
+      .map((scheme) => scheme.name ?? '')
+  )
+
+// The address to request: required path and query parameters take the document's own example values.
 const planUrl = (
   path: string,
   parameters: readonly OpenApiParameter[],
-  server: URL
+  server: URL,
+  credentialQueryNames: ReadonlySet<string>
 ): Planned<string> => {
   let filledPath = path
   const query = new URLSearchParams()
@@ -92,6 +109,10 @@ const planUrl = (
     const isSendable = isPathParameter || parameter.in === 'query'
     if (!isSendable) {
       return skipped(`it requires the ${parameter.in} parameter "${parameter.name}"`)
+    }
+    const isCredential = !isPathParameter && credentialQueryNames.has(parameter.name)
+    if (isCredential) {
+      return skipped(`it requires the credential query parameter "${parameter.name}"`)
     }
     const value = exampleOf(parameter)
     const hasValue = value !== undefined
@@ -110,6 +131,10 @@ const planUrl = (
   if (!isFilled) return skipped('its path has a placeholder the document declares no parameter for')
   const url = new URL(`${server.pathname.replace(/\/$/, '')}${filledPath}`, server.origin)
   url.search = query.toString()
+  const isServerSite = url.origin === server.origin
+  if (!isServerSite) return skipped(`its address ${url.href} is on another site than its server`)
+  const isSafeAddress = !UNSAFE_LINK.test(`${url.pathname}${url.search}`)
+  if (!isSafeAddress) return skipped('its address suggests it ends a session or changes data')
   return planned(url.href)
 }
 
@@ -132,53 +157,54 @@ const planResponses = (
 
 const planOperation = (
   document: OpenApiDocument,
-  server: URL,
+  documentUrl: string,
   path: string,
   item: OpenApiPathItem,
   operation: OpenApiOperation
 ): Planned<ApiOperation> => {
-  const isSitePath = path.startsWith('/')
-  if (!isSitePath) return skipped('its path does not start with "/"')
-  const isUnsafe = UNSAFE_LINK.test(path)
-  if (isUnsafe) return skipped('its path suggests it ends a session or changes data')
+  const hasSitePath = isSitePath(path)
+  if (!hasSitePath) return skipped('its path does not start with one "/"')
+  const isSafePath = !UNSAFE_LINK.test(path)
+  if (!isSafePath) return skipped('its path suggests it ends a session or changes data')
 
+  const server = planServer(operation.servers ?? item.servers ?? document.servers, documentUrl)
+  if (!isPlanned(server)) return server
   const parameters = planParameters(document, item, operation)
-  if (parameters.kind === 'skipped') return parameters
-  const url = planUrl(path, parameters.value, server)
-  if (url.kind === 'skipped') return url
+  if (!isPlanned(parameters)) return parameters
+  const url = planUrl(path, parameters.value, server.value, credentialQueryNamesOf(document))
+  if (!isPlanned(url)) return url
   const responses = planResponses(document, operation)
-  if (responses.kind === 'skipped') return responses
+  if (!isPlanned(responses)) return responses
 
+  // An empty requirement among the alternatives lets a request through without credentials.
   const security = operation.security ?? document.security ?? []
+  const requiresCredentials =
+    security.length > 0 && security.every((requirement) => Object.keys(requirement).length > 0)
   return planned({
     method: 'GET',
     path,
     url: url.value,
-    secured: security.some((requirement) => Object.keys(requirement).length > 0),
+    secured: requiresCredentials,
     responses: responses.value
   })
 }
 
-// The requests a run makes from the site's OpenAPI document: its GET operations only, on the
-// document's own site, up to `limit`. Every GET operation left out is listed with the reason.
+// The requests a run makes from the site's OpenAPI document: its GET operations on the document's
+// own site, up to `limit`. Every GET operation left out is listed with the reason.
 export const planApiOperations = (
   document: OpenApiDocument,
   documentUrl: string,
   limit: number = API_OPERATION_LIMIT
 ): ApiOperationPlan => {
-  const server = planServer(document, documentUrl)
   const operations: ApiOperation[] = []
   const skippedOperations: { path: string; reason: string }[] = []
   for (const [path, item] of Object.entries(document.paths)) {
     const operation = item.get
     const hasGetOperation = operation !== undefined
     if (!hasGetOperation) continue
-    const plan =
-      server.kind === 'skipped'
-        ? server
-        : planOperation(document, server.value, path, item, operation)
+    const plan = planOperation(document, documentUrl, path, item, operation)
     const hasRoom = operations.length < limit
-    if (plan.kind === 'skipped') skippedOperations.push({ path, reason: plan.reason })
+    if (!isPlanned(plan)) skippedOperations.push({ path, reason: plan.reason })
     else if (hasRoom) operations.push(plan.value)
     else {
       skippedOperations.push({

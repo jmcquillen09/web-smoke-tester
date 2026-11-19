@@ -29,17 +29,23 @@ const OpenApiResponseSchema = z.object({
 
 const OpenApiSecuritySchema = z.array(z.record(z.string(), z.array(z.string())))
 
+const OpenApiServersSchema = z.array(z.object({ url: z.string() }))
+
 const OpenApiOperationSchema = z.object({
   parameters: z.array(z.union([OpenApiReferenceSchema, OpenApiParameterSchema])).optional(),
   /** The responses the operation declares, by status (`200`), range (`2XX`) or `default`. */
   responses: z
     .record(z.string(), z.union([OpenApiReferenceSchema, OpenApiResponseSchema]))
     .optional(),
-  security: OpenApiSecuritySchema.optional()
+  security: OpenApiSecuritySchema.optional(),
+  /** The servers this operation is served from, in place of the path's and the document's. */
+  servers: OpenApiServersSchema.optional()
 })
 
 const OpenApiPathItemSchema = z.object({
   get: OpenApiOperationSchema.optional(),
+  /** The servers this path's operations are served from, in place of the document's. */
+  servers: OpenApiServersSchema.optional(),
   parameters: z.array(z.union([OpenApiReferenceSchema, OpenApiParameterSchema])).optional()
 })
 
@@ -47,13 +53,20 @@ const OpenApiPathItemSchema = z.object({
 // schema does not name are dropped rather than refused.
 export const OpenApiDocumentSchema = z.object({
   openapi: z.string().startsWith('3.'),
-  servers: z.array(z.object({ url: z.string() })).optional(),
+  servers: OpenApiServersSchema.optional(),
   security: OpenApiSecuritySchema.optional(),
   paths: z.record(z.string(), OpenApiPathItemSchema),
   components: z
     .object({
       parameters: z.record(z.string(), OpenApiParameterSchema).optional(),
-      responses: z.record(z.string(), OpenApiResponseSchema).optional()
+      responses: z.record(z.string(), OpenApiResponseSchema).optional(),
+      /** How a request proves who sends it; an `apiKey` scheme names the parameter carrying the key. */
+      securitySchemes: z
+        .record(
+          z.string(),
+          z.object({ type: z.string(), in: z.string().optional(), name: z.string().optional() })
+        )
+        .optional()
     })
     .optional()
 })

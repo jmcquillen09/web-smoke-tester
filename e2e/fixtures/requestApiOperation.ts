@@ -4,9 +4,8 @@ import { URL_CHECK_TIMEOUT_MS } from '../constants.ts'
 import { E2eFixtureError } from '../errors/E2eFixtureError.ts'
 import type { ApiAnswer } from './ApiAnswer.ts'
 
-// Requests one planned operation and returns its answer: the state every API check starts from. An
-// error status is an answer for the checks to judge; an operation that never answers is a setup
-// failure.
+// Requests one planned operation and returns its own answer, a redirect included, never the answer
+// of where it redirects to. An operation that never answers is a setup failure.
 export const requestApiOperation = async (
   request: APIRequestContext,
   operation: ApiOperation
@@ -14,6 +13,7 @@ export const requestApiOperation = async (
   try {
     const response = await request.get(operation.url, {
       failOnStatusCode: false,
+      maxRedirects: 0,
       timeout: URL_CHECK_TIMEOUT_MS
     })
     const [mediaType = ''] = (response.headers()['content-type'] ?? '').split(';')

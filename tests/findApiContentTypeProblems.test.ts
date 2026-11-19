@@ -61,6 +61,18 @@ void test('a content type the document does not declare is listed with the ones 
   )
 })
 
+void test('an answer that names no content type is in no declared range', () => {
+  const operation = operationWith([{ status: '200', contentTypes: ['*/*'] }])
+
+  assert.deepEqual(findApiContentTypeProblems({ operation, status: 200, contentType: '' }), [
+    'answered HTTP 200 as no content type; the document declares */*'
+  ])
+  assert.deepEqual(
+    findApiContentTypeProblems({ operation, status: 200, contentType: 'image/png' }),
+    []
+  )
+})
+
 void test('a status with no declared body, or not declared at all, is not judged here', () => {
   assert.deepEqual(
     findApiContentTypeProblems({ operation: OPERATION, status: 204, contentType: 'text/plain' }),
