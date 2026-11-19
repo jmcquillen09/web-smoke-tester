@@ -37,12 +37,14 @@ and checks each answer:
 | ------------------ | ------------------------------------------------------------------------------------ |
 | Documented status  | it answers with a status the document declares for it, and never with a server error |
 | Documented content | the answer's content type is one the document declares for that status               |
+| Documented body    | the answer's JSON body is what the document's schema for that status allows          |
+| Secured operation  | an operation the document marks as secured refuses a request without credentials     |
 
 Only `GET` is ever requested, with no credentials and no body, and every operation a run leaves
-out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: three
-of its operations break their own document on purpose. A run against it shows fifteen passing tests
-and three expected failures, one per seeded bug, and fails if a bug goes uncaught or anything else
-is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
+out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: five
+of its operations break their own document on purpose. A run against it shows twenty-three passing
+tests and five expected failures, one per seeded bug, and fails if a bug goes uncaught or anything
+else is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
 document is found and which operations a run requests.
 
 ## Running

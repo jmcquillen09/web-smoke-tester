@@ -32,7 +32,7 @@ Only test APIs you own or have permission to test.
 
 The repo bundles a small read-only API to run the checks against, under [`demo/`](../demo): fixed
 data, no state between requests, and an OpenAPI document at `/openapi.json`
-([`demo/openapi.json`](../demo/openapi.json)). Three of its operations break that document on
+([`demo/openapi.json`](../demo/openapi.json)). Five of its operations break that document on
 purpose, so a run shows what a failure looks like.
 
 ```bash
@@ -56,21 +56,23 @@ document beside its pages, so `npm run test:api-playwright` with no target gives
 `npm run serve:demo-api` serves the same API until stopped, to explore it by hand; stop it before
 an API run against `demo-api`, which needs the port.
 
-A run plans nine operations, so eighteen tests. Fifteen pass, and the three that catch a seeded
-bug fail as the `demo-api` target's `expectedApiFailures` says they will, so the run is green and
-exits `0`.
+A run plans ten operations and writes 32 tests: a status, a content type and a body test for each,
+and an auth test for the two the document marks as secured. Twenty-three pass and four are skipped,
+their answers having no schema to hold against. The five that catch a seeded bug fail as the
+`demo-api` target's `expectedApiFailures` says they will, so the run is green and exits `0`.
 
-| Operation                                | The demo API answers                | Result                                                                 |
-| ---------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `GET /books`                             | 200, JSON                           | both checks pass                                                       |
-| `GET /books/search`                      | 200, JSON                           | both checks pass                                                       |
-| `GET /books/{bookId}`                    | 200, JSON                           | both checks pass                                                       |
-| `GET /books/{bookId}/reviews`            | 200, JSON                           | both checks pass                                                       |
-| `GET /books/{bookId}/reviews/{reviewId}` | 200, JSON                           | both checks pass, on the review the list names                         |
-| `GET /authors`                           | 200, as `text/html`                 | expected failure of the content type check: the document declares JSON |
-| `GET /authors/{authorId}`                | 500                                 | expected failure of the status check: a server error                   |
-| `GET /stats`                             | 202                                 | expected failure of the status check: the document declares only 200   |
-| `GET /account`                           | 401, an operation marked as secured | both checks pass: a run sends no credentials                           |
+| Operation                                | The demo API answers                     | Result                                                                                                                    |
+| ---------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `GET /books`                             | 200, JSON                                | every check passes                                                                                                        |
+| `GET /books/search`                      | 200, JSON, a book without its `authorId` | expected failure of the body check: the schema requires `authorId`                                                        |
+| `GET /books/{bookId}`                    | 200, JSON                                | every check passes                                                                                                        |
+| `GET /books/{bookId}/reviews`            | 200, JSON                                | every check passes                                                                                                        |
+| `GET /books/{bookId}/reviews/{reviewId}` | 200, JSON                                | every check passes, on the review the list names                                                                          |
+| `GET /authors`                           | 200, as `text/html`                      | expected failure of the content type check: the document declares JSON. The body check is skipped: the answer is not JSON |
+| `GET /authors/{authorId}`                | 500                                      | expected failure of the status check: a server error. The body check is skipped: no schema is declared for a 500          |
+| `GET /stats`                             | 202                                      | expected failure of the status check: the document declares only 200. The body check is skipped                           |
+| `GET /account`                           | 401, an operation marked as secured      | the status, content type and auth checks pass: a run sends no credentials. The body check is skipped                      |
+| `GET /account/orders`                    | 200, an operation marked as secured      | expected failure of the auth check: it answers a request without credentials                                              |
 
 The document gives no example for `reviewId`, so the run takes it from the first review
 `GET /books/{bookId}/reviews` lists and says so. It skips one more operation with the reason:
@@ -82,7 +84,7 @@ a free port inside `npm test` and asserts exactly these findings, and that the t
 ## Expected failures
 
 A target lists the checks known to fail on its API in `expectedApiFailures`, each an operation's
-path as the document writes it and the check (`status` or `contentType`):
+path as the document writes it and the check (`status`, `contentType`, `body` or `auth`):
 
 ```json
 "expectedApiFailures": [
@@ -153,13 +155,16 @@ without the runner has none, so the API specs write no tests.
 
 ## What each check does
 
-Every planned operation gets one test per check. The specs live under [`e2e/api/`](../e2e/api) and
-run in the `api` Playwright project.
+The specs live under [`e2e/api/`](../e2e/api) and run in the `api` Playwright project. Every
+planned operation gets a status and a content type test; the other two checks are written only for
+the operations they apply to.
 
-| Spec                            | Stage                      | Fails when                                                                                                                                                |
-| ------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `documentedStatus.spec.ts`      | `CheckApiStatusStage`      | the answer is a server error (500 or above), or its status is not one the document declares for the operation by code, range (`2XX`) or `default`         |
-| `documentedContentType.spec.ts` | `CheckApiContentTypeStage` | the document declares body content types for the answered status and the answer's is none of them, counting a declared range (`application/*`) as a match |
+| Spec                            | Stage                      | Written for                                          | Fails when                                                                                                                                                |
+| ------------------------------- | -------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `documentedStatus.spec.ts`      | `CheckApiStatusStage`      | every operation                                      | the answer is a server error (500 or above), or its status is not one the document declares for the operation by code, range (`2XX`) or `default`         |
+| `documentedContentType.spec.ts` | `CheckApiContentTypeStage` | every operation                                      | the document declares body content types for the answered status and the answer's is none of them, counting a declared range (`application/*`) as a match |
+| `documentedBody.spec.ts`        | `CheckApiBodyStage`        | an operation the document declares a body schema for | the answer's JSON body is not what the schema declared for the answered status and content type allows                                                    |
+| `securedOperation.spec.ts`      | `CheckApiAuthStage`        | an operation the document marks as secured           | it answers a request without credentials with anything but 401 or 403                                                                                     |
 
 - **An operation the document marks as secured may answer 401 or 403**: a run sends no credentials,
   so that refusal is the documented behaviour, whether or not the document lists the status. An
@@ -171,7 +176,17 @@ run in the `api` Playwright project.
 - **A server error fails even when the document declares it.** A plain `GET` built from the
   document's own examples is a request the server is expected to handle.
 - **An operation that never answers is a setup failure** (`E2eFixtureError`), not a failed check.
-- **The body itself is not validated** against the response schema.
+- **A body is validated with [Ajv](https://ajv.js.org/)**
+  ([`e2e/fixtures/validateApiBody.ts`](../e2e/fixtures/validateApiBody.ts)). An OpenAPI 3.0 schema
+  is read as JSON Schema draft-07 with `nullable`, a 3.1 schema as JSON Schema 2020-12, and a
+  `$ref` to the document's `components/schemas` is followed, around a circle too. `format` is not
+  judged, and keywords JSON Schema does not know (`example`, `xml`) are passed over.
+- **A body with nothing to hold it against is skipped, not passed**, and the report says why: the
+  answer is not JSON, the document declares no schema for that status and content type, or a
+  validator cannot read the schema it declares.
+- **The auth check and the status check agree on a refusal.** A secured operation that answers 401
+  or 403 passes both; one that answers 200 passes the status check, when 200 is declared, and
+  fails the auth check.
 
 ## How it is built
 
@@ -180,8 +195,12 @@ run in the `api` Playwright project.
   expected failure and fails on any finding. A check stage only names its `check` and writes
   `findProblems`.
 - The judgments are pure functions that return findings as data: `findApiStatusProblems`,
-  `findApiContentTypeProblems` and `findDeclaredApiResponse` under
-  [`e2e/fixtures/`](../e2e/fixtures), unit-tested in [`tests/`](../tests).
+  `findApiContentTypeProblems`, `findApiBodyProblems`, `findApiAuthProblems` and
+  `findDeclaredApiResponse` under [`e2e/fixtures/`](../e2e/fixtures), unit-tested in
+  [`tests/`](../tests).
+- A response's schema is handed to its test standing alone:
+  [`e2e/bundleBodySchema.ts`](../e2e/bundleBodySchema.ts) carries with it every schema of the
+  document it points at.
 - The API specs use `apiTest` ([`e2e/fixtures/apiTest.ts`](../e2e/fixtures/apiTest.ts)), whose
   `stageRuntime` holds only `request` and `targetSettings` (`ApiStageRuntime`). It opens no page,
   so an API run needs no browser installed.
@@ -192,4 +211,5 @@ run in the `api` Playwright project.
 To add an API check: write the fixture that judges an `ApiAnswer` and returns findings, create
 `e2e/stages/<Name>Stage.ts` extending `ApiOperationStage`, add the check's name to
 [`e2e/ApiCheck.ts`](../e2e/ApiCheck.ts), run the stage from an isolated spec under `e2e/api/` that
-loops over `activeApiOperations()` with `apiTest`, and add its row to the table above.
+loops over `activeApiOperations()` with `apiTest` (filtered to the operations the check applies
+to, so none is written only to be skipped), and add its row to the table above.
