@@ -14,6 +14,7 @@ import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
+import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
 
 const PAGES = ['/', '/books', '/about']
 const FILES = [
@@ -23,16 +24,8 @@ const FILES = [
   '/images/field-guide-to-fog.svg'
 ]
 
-// Serves the demo site on a free port for one test and hands it the site's address.
-const withDemoSite = async (work: (baseUrl: string) => Promise<void>): Promise<void> => {
-  const server = await startDemoServer(demoSite, 0, '127.0.0.1')
-  const { port } = server.address() as AddressInfo
-  try {
-    await work(`http://127.0.0.1:${String(port)}`)
-  } finally {
-    await stopDemoServer(demoSite, server)
-  }
-}
+const withDemoSite = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
+  withRunningDemoServer(demoSite, work)
 
 void test('a crawl from the demo site’s home page finds every page', async () => {
   await withDemoSite(async (baseUrl) => {
