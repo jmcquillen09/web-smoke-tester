@@ -263,14 +263,16 @@ patterns) live in [`e2e/constants.ts`](../e2e/constants.ts).
 ## How a run is put together
 
 1. The command's script under [`scripts/`](../scripts) (`runE2ePlaywright.ts`,
-   `runWebPlaywright.ts` or `runApiPlaywright.ts`) takes `--browser` and the target out of the
-   arguments and resolves the target from `targets.json`.
+   `runWebPlaywright.ts` or `runApiPlaywright.ts`) takes the target out of the arguments and
+   resolves it from `targets.json`. The first two also take `--browser`; an API run opens no
+   browser and passes every other argument on.
 2. [`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts) serves the demo server the
    target names, checks that the site answers, and has the command find what to test: the site's
    pages ([`e2e/planWebRun.ts`](../e2e/planWebRun.ts)), its API's operations
    ([`e2e/planApiRun.ts`](../e2e/planApiRun.ts)), or both. It then starts `playwright test` with
-   `E2E_TARGET`, `E2E_BROWSER`, `E2E_SITE_PAGES` and `E2E_API_OPERATIONS` set. A web-only run hands
-   over no operations, and an API-only run names only the `api` project.
+   `E2E_TARGET` set, and with what the command found: `E2E_BROWSER` and `E2E_SITE_PAGES` for the
+   web tests, `E2E_API_OPERATIONS` for the API tests. A web-only run hands over no operations, and
+   an API-only run names only the `api` project.
 3. [`playwright.config.ts`](../playwright.config.ts) resolves the same target and browsers through
    the same functions, and builds the projects.
 4. [`e2e/globalSetup.ts`](../e2e/globalSetup.ts) asks the site for its start page once
