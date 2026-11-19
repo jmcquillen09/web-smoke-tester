@@ -2,7 +2,7 @@
 // `npm run test:api-playwright [target] [args...]`: runs only the API tests, the `api` project of
 // `playwright test`, on the GET operations of the target's OpenAPI document.
 
-import { API_OPERATIONS_VARIABLE, API_PROJECT } from '../e2e/constants.ts'
+import { API_PROJECT } from '../e2e/constants.ts'
 import { planApiRun } from '../e2e/planApiRun.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { runPlaywrightForTarget } from '../e2e/runPlaywrightForTarget.ts'
@@ -17,6 +17,7 @@ const { settings, rest: playwrightArgs } = stopOnConfigurationError(COMMAND, () 
 )
 
 await runPlaywrightForTarget(COMMAND, settings, playwrightArgs, async (siteRequest, log) => ({
-  env: { [API_OPERATIONS_VARIABLE]: JSON.stringify(await planApiRun(settings, siteRequest, log)) },
+  env: {},
+  apiOperations: await planApiRun(settings, siteRequest, log),
   args: [`--project=${API_PROJECT}`]
 }))

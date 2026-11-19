@@ -271,7 +271,7 @@ patterns) live in [`e2e/constants.ts`](../e2e/constants.ts).
    pages ([`e2e/planWebRun.ts`](../e2e/planWebRun.ts)), its API's operations
    ([`e2e/planApiRun.ts`](../e2e/planApiRun.ts)), or both. It then starts `playwright test` with
    `E2E_TARGET` set, and with what the command found: `E2E_BROWSER` and `E2E_SITE_PAGES` for the
-   web tests, `E2E_API_OPERATIONS` for the API tests. A web-only run hands over no operations, and
+   web tests, `E2E_API_OPERATIONS_FILE` for the API tests. A web-only run hands over no operations, and
    an API-only run names only the `api` project.
 3. [`playwright.config.ts`](../playwright.config.ts) resolves the same target and browsers through
    the same functions, and builds the projects.

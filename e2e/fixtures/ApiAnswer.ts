@@ -6,4 +6,6 @@ export interface ApiAnswer {
   readonly status: number
   /** The answer's media type, lowercase and without parameters; empty when it names none. */
   readonly contentType: string
+  /** The answer's body as text; empty when it has none. */
+  readonly body: string
 }

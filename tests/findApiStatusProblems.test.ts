@@ -9,11 +9,12 @@ const operationWith = (statuses: readonly string[], secured = false): ApiOperati
   path: '/pets',
   url: 'https://api.example/pets',
   secured,
+  bodySchemas: [],
   responses: statuses.map((status) => ({ status, contentTypes: [] }))
 })
 
 const problemsOf = (operation: ApiOperation, status: number): string[] =>
-  findApiStatusProblems({ operation, status, contentType: 'application/json' })
+  findApiStatusProblems({ operation, status, contentType: 'application/json', body: '' })
 
 void test('a status the document declares by code, range or default has no problem', () => {
   assert.deepEqual(problemsOf(operationWith(['200', '404']), 404), [])

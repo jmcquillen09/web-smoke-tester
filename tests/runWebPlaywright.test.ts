@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
 import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
-import { API_OPERATIONS_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { API_OPERATIONS_FILE_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { writeApiOperationsFile } from '../e2e/writeApiOperationsFile.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
@@ -28,15 +31,19 @@ const listSiteTests = (targetsFile: string): Promise<{ code: number; output: str
   runNodeScript([RUNNER, 'demo', '--list'], {
     [TARGETS_FILE_VARIABLE]: targetsFile,
     // Left over from another run: a web run must not pick these up.
-    [API_OPERATIONS_VARIABLE]: JSON.stringify([
-      {
-        method: 'GET',
-        path: '/books',
-        url: 'http://localhost/api/books',
-        secured: false,
-        responses: []
-      }
-    ])
+    [API_OPERATIONS_FILE_VARIABLE]: writeApiOperationsFile(
+      mkdtempSync(path.join(tmpdir(), 'left-over-operations-')),
+      [
+        {
+          method: 'GET',
+          path: '/books',
+          url: 'http://localhost/api/books',
+          secured: false,
+          bodySchemas: [],
+          responses: []
+        }
+      ]
+    )
   })
 
 void test('a run against a target that serves the demo site starts it, crawls it and shuts it down', async () => {

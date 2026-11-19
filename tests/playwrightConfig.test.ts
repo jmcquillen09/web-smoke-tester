@@ -5,12 +5,14 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
+import type { ApiOperation } from '../e2e/ApiOperation.ts'
 import {
-  API_OPERATIONS_VARIABLE,
+  API_OPERATIONS_FILE_VARIABLE,
   API_PROJECT,
   TARGET_VARIABLE,
   TARGETS_FILE_VARIABLE
 } from '../e2e/constants.ts'
+import { writeApiOperationsFile } from '../e2e/writeApiOperationsFile.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
@@ -21,11 +23,12 @@ const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/
 void test('Playwright started without a runner serves the target’s demo server and shuts it down', async () => {
   const baseUrl = `http://${HOST}:${String(await findFreePort())}`
   const scratch = mkdtempSync(path.join(tmpdir(), 'runner-free-run-'))
-  const operation = {
+  const operation: ApiOperation = {
     method: 'GET',
     path: '/books',
     url: `${baseUrl}/api/books`,
     secured: false,
+    bodySchemas: [],
     responses: [{ status: '200', contentTypes: ['application/json'] }]
   }
 
@@ -46,7 +49,7 @@ void test('Playwright started without a runner serves the target’s demo server
         })
       ),
       [TARGET_VARIABLE]: 'demo',
-      [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
+      [API_OPERATIONS_FILE_VARIABLE]: writeApiOperationsFile(scratch, [operation])
     }
   )
 

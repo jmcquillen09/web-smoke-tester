@@ -10,6 +10,7 @@ Official upstream documentation for primary project dependencies.
 - Node test runner (unit tests in `tests/`): https://nodejs.org/api/test.html
 - Zod (the targets file, the OpenAPI document, and the pages and operations handed to Playwright): https://zod.dev/
 - OpenAPI Specification (the document the API run reads): https://spec.openapis.org/oas/latest.html
+- Ajv (holds an API answer's body against the document's JSON Schema): https://ajv.js.org/
   - Playwright `APIRequestContext` (how an API stage requests an operation): https://playwright.dev/docs/api/class-apirequestcontext
 
 ## Language and tooling

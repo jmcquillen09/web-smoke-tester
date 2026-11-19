@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { JsonObjectSchema } from './JsonObject.ts'
 
 // A value a document offers for a parameter; anything else it offers (a list, an object) is not used.
 const OpenApiExampleSchema = z.union([z.string(), z.number(), z.boolean()])
@@ -24,7 +25,13 @@ const OpenApiParameterSchema = z.object({
 
 const OpenApiResponseSchema = z.object({
   /** The body's content types, each a key; absent when the response declares no body. */
-  content: z.record(z.string(), z.object({})).optional()
+  content: z
+    .record(
+      z.string(),
+      /** The body's schema: an object, or `true` or `false`. Anything else is read as none. */
+      z.object({ schema: z.union([JsonObjectSchema, z.boolean()]).optional().catch(undefined) })
+    )
+    .optional()
 })
 
 const OpenApiSecuritySchema = z.array(z.record(z.string(), z.array(z.string())))
@@ -64,6 +71,8 @@ export const OpenApiDocumentSchema = z.object({
       responses: z
         .record(z.string(), z.union([OpenApiReferenceSchema, OpenApiResponseSchema]))
         .optional(),
+      /** The schemas the document's responses point at with `$ref`. */
+      schemas: z.record(z.string(), z.json()).optional().catch(undefined),
       /** How a request proves who sends it; an `apiKey` scheme names the parameter carrying the key. */
       securitySchemes: z
         .record(

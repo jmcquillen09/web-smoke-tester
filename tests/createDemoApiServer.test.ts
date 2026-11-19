@@ -9,15 +9,29 @@ import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
 import { fetchApiList } from '../e2e/fetchApiList.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
+import type { ApiAnswer } from '../e2e/fixtures/ApiAnswer.ts'
+import { findApiAuthProblems } from '../e2e/fixtures/findApiAuthProblems.ts'
 import { findApiContentTypeProblems } from '../e2e/fixtures/findApiContentTypeProblems.ts'
 import { findApiStatusProblems } from '../e2e/fixtures/findApiStatusProblems.ts'
 import { requestApiOperation } from '../e2e/fixtures/requestApiOperation.ts'
+import { validateApiBody } from '../e2e/fixtures/validateApiBody.ts'
 import { planApiOperationsWithListedValues } from '../e2e/planApiOperationsWithListedValues.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
+
+// Every API check's judgment, in the order a target lists an operation's expected failures.
+const PROBLEM_FINDERS: Record<ApiCheck, (answer: ApiAnswer) => string[]> = {
+  [ApiCheck.BODY]: (answer) => {
+    const result = validateApiBody(answer)
+    return result.kind === 'checked' ? [...result.problems] : []
+  },
+  [ApiCheck.CONTENT_TYPE]: findApiContentTypeProblems,
+  [ApiCheck.STATUS]: findApiStatusProblems,
+  [ApiCheck.AUTH]: findApiAuthProblems
+}
 
 const withDemoApi = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
   withRunningDemoServer(demoApi, work)
@@ -51,7 +65,8 @@ void test('an API run plans the demo API’s operations, one with a listed value
         '/api/authors',
         '/api/authors/1',
         '/api/stats',
-        '/api/account'
+        '/api/account',
+        '/api/account/orders'
       ]
     )
     assert.deepEqual(plan.skipped, [
@@ -68,10 +83,9 @@ void test('the checks find each bug seeded in the demo API, and nothing else', a
     try {
       for (const operation of plan.operations) {
         const answer = await requestApiOperation(context, operation)
-        findings[operation.path] = [
-          ...findApiStatusProblems(answer),
-          ...findApiContentTypeProblems(answer)
-        ]
+        findings[operation.path] = Object.values(PROBLEM_FINDERS).flatMap((findProblems) =>
+          findProblems(answer)
+        )
       }
     } finally {
       await context.dispose()
@@ -79,14 +93,17 @@ void test('the checks find each bug seeded in the demo API, and nothing else', a
 
     assert.deepEqual(findings, {
       '/books': [],
-      '/books/search': [],
+      '/books/search': ["/0 must have required property 'authorId'"],
       '/books/{bookId}': [],
       '/books/{bookId}/reviews': [],
       '/books/{bookId}/reviews/{reviewId}': [],
       '/authors': ['answered HTTP 200 as text/html; the document declares application/json'],
       '/authors/{authorId}': ['answered HTTP 500, a server error'],
       '/stats': ['answered HTTP 202, which the document does not declare (declared: 200)'],
-      '/account': []
+      '/account': [],
+      '/account/orders': [
+        'answered HTTP 200 to a request without credentials; the document marks the operation as secured, so it should answer 401 or 403'
+      ]
     })
   })
 })
@@ -101,11 +118,10 @@ void test('the repo’s demo-api target expects exactly the failures the checks 
     try {
       for (const operation of plan.operations) {
         const answer = await requestApiOperation(context, operation)
-        const hasContentTypeProblem = findApiContentTypeProblems(answer).length > 0
-        const hasStatusProblem = findApiStatusProblems(answer).length > 0
-        if (hasContentTypeProblem)
-          failures.push({ path: operation.path, check: ApiCheck.CONTENT_TYPE })
-        if (hasStatusProblem) failures.push({ path: operation.path, check: ApiCheck.STATUS })
+        for (const [check, findProblems] of Object.entries(PROBLEM_FINDERS)) {
+          const hasProblem = findProblems(answer).length > 0
+          if (hasProblem) failures.push({ path: operation.path, check: check as ApiCheck })
+        }
       }
     } finally {
       await context.dispose()

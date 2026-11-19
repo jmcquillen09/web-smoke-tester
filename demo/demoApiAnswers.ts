@@ -17,8 +17,8 @@ const AUTHORS = [
   { id: 2, name: 'Tomas Reed' }
 ]
 
-// What each address answers a reader who sent no credentials. Three answers break the document on
-// purpose: /api/authors, /api/authors/1 and /api/stats.
+// What each address answers a reader who sent no credentials. Five answers break the document on
+// purpose, each marked as a seeded bug below.
 export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
   [DEMO_OPENAPI_PATH]: {
     status: 200,
@@ -26,7 +26,8 @@ export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
     body: readFileSync(path.join(import.meta.dirname, DEMO_OPENAPI_FILE), 'utf8')
   },
   '/api/books': jsonAnswer(200, BOOKS),
-  '/api/books/search': jsonAnswer(200, BOOKS.slice(0, 1)),
+  // Seeded bug: the document's schema requires every book to name its author.
+  '/api/books/search': jsonAnswer(200, [{ id: 1, title: 'The Tide Tables' }]),
   '/api/books/1': jsonAnswer(200, { id: 1, title: 'The Tide Tables', authorId: 1 }),
   '/api/books/2': jsonAnswer(200, { id: 2, title: 'A Field Guide to Fog', authorId: 2 }),
   // The document gives no example for a review's id: a run takes it from this list.
@@ -42,5 +43,7 @@ export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
   '/api/authors/1': jsonAnswer(500, { error: 'The author could not be read.' }),
   // Seeded bug: the document declares only 200 for this operation.
   '/api/stats': jsonAnswer(202, { books: BOOKS.length, authors: AUTHORS.length }),
-  '/api/account': jsonAnswer(401, { error: 'Sign in to read your account.' })
+  '/api/account': jsonAnswer(401, { error: 'Sign in to read your account.' }),
+  // Seeded bug: the document marks this operation as secured, and it answers anyone.
+  '/api/account/orders': jsonAnswer(200, [{ id: 31, bookId: 1 }])
 }

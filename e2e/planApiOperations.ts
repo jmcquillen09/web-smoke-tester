@@ -1,7 +1,10 @@
+import { z } from 'zod'
 import type { ApiOperation } from './ApiOperation.ts'
+import { bundleBodySchema } from './bundleBodySchema.ts'
 import { API_OPERATION_LIMIT, UNSAFE_LINK } from './constants.ts'
 import { isSafeAddress } from './isSafeAddress.ts'
 import { isSitePath } from './isSitePath.ts'
+import { type JsonObject, JsonObjectSchema } from './JsonObject.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
 
 export interface ApiOperationPlan {
@@ -210,11 +213,22 @@ const planUrl = (
   return planned(url.href)
 }
 
+// The document's schemas a response can point at: an object, or `true` or `false`. Anything else
+// under a schema's name is left out, so one malformed entry does not cost the others.
+const usableSchemasOf = (document: OpenApiDocument): Record<string, JsonObject | boolean> =>
+  Object.fromEntries(
+    Object.entries(document.components?.schemas ?? {}).flatMap(([name, schema]) => {
+      const usable = z.union([JsonObjectSchema, z.boolean()]).safeParse(schema)
+      return usable.success ? [[name, usable.data]] : []
+    })
+  )
+
 const planResponses = (
   document: OpenApiDocument,
   operation: OpenApiOperation
-): Planned<ApiOperation['responses']> => {
+): Planned<Pick<ApiOperation, 'responses' | 'bodySchemas'>> => {
   const responses: ApiOperation['responses'] = []
+  const bodySchemas: ApiOperation['bodySchemas'] = []
   for (const [status, entry] of Object.entries(operation.responses ?? {})) {
     const response: OpenApiResponse | undefined = isReference(entry)
       ? resolveComponent<OpenApiResponse>(
@@ -226,9 +240,19 @@ const planResponses = (
     const isResolved = response !== undefined
     if (!isResolved)
       return skipped("it has a response $ref that names no definition in the document's components")
-    responses.push({ status, contentTypes: Object.keys(response.content ?? {}) })
+    const content = Object.entries(response.content ?? {})
+    responses.push({ status, contentTypes: content.map(([contentType]) => contentType) })
+    for (const [contentType, { schema }] of content) {
+      const hasSchema = schema !== undefined
+      if (!hasSchema) continue
+      bodySchemas.push({
+        status,
+        contentType,
+        schema: bundleBodySchema(schema, usableSchemasOf(document), document.openapi)
+      })
+    }
   }
-  return planned(responses)
+  return planned({ responses, bodySchemas })
 }
 
 const planOperation = (
@@ -268,7 +292,8 @@ const planOperation = (
     path,
     url: url.value,
     secured: requiresCredentials,
-    responses: responses.value
+    responses: responses.value.responses,
+    bodySchemas: responses.value.bodySchemas
   })
 }
 

@@ -3,6 +3,7 @@ import type { ApiCheck } from '../ApiCheck.ts'
 import type { ApiOperation } from '../ApiOperation.ts'
 import { EXPECTED_API_FAILURE } from '../constants.ts'
 import type { ApiAnswer } from '../fixtures/ApiAnswer.ts'
+import type { ApiCheckResult } from '../fixtures/ApiCheckResult.ts'
 import { requestApiOperation } from '../fixtures/requestApiOperation.ts'
 import { isExpectedApiFailure } from '../isExpectedApiFailure.ts'
 import type { ApiStageRuntime } from './ApiStageRuntime.ts'
@@ -22,8 +23,8 @@ export abstract class ApiOperationStage extends E2eStage<ApiStageRuntime> {
 
   /** The check this stage makes, as a target's `expectedApiFailures` names it. */
   public abstract readonly check: ApiCheck
-  /** What the check finds wrong with the answer, one line each; empty when nothing is. */
-  protected abstract findProblems(answer: ApiAnswer): string[]
+  /** What the check comes to on the answer: what is wrong with it, or why it cannot be judged. */
+  protected abstract judge(answer: ApiAnswer): ApiCheckResult
 
   public override async setup(): Promise<E2eWorkflowState> {
     return E2eWorkflowState.empty().withApiAnswer(
@@ -33,13 +34,16 @@ export abstract class ApiOperationStage extends E2eStage<ApiStageRuntime> {
 
   public override async execute(state: E2eWorkflowState): Promise<E2eWorkflowState> {
     const answer = state.requireApiAnswer()
+    const result = this.judge(answer)
+    const isChecked = result.kind === 'checked'
+    test.skip(!isChecked, isChecked ? '' : result.reason)
     // Marked once there is an answer to judge, so an operation that never answers still fails.
     test.fail(
       isExpectedApiFailure(this.runtime.targetSettings, answer.operation, this.check),
       EXPECTED_API_FAILURE
     )
 
-    const problems = this.findProblems(answer)
+    const problems = isChecked ? result.problems : []
 
     expect(problems, `${this.title}: GET ${answer.operation.url}`).toEqual([])
     return state
