@@ -156,6 +156,32 @@ void test('an OpenAPI document path must start from the root of the site', () =>
   })
 })
 
+void test('an OpenAPI document path cannot name another site through URL normalisation', () => {
+  for (const apiSpecPath of [
+    '//other.example/api',
+    '/\\other.example/api',
+    '/\t/other.example/api'
+  ]) {
+    const targets = targetsWith({
+      staging: { baseUrl: 'https://staging.example.com', apiSpecPath }
+    })
+
+    assert.throws(() => resolveE2eTarget('staging', targets), { name: 'E2eConfigurationError' })
+  }
+})
+
+void test('an OpenAPI document path a read-only run may not request is refused', () => {
+  const targets = targetsWith({
+    staging: { baseUrl: 'https://staging.example.com', apiSpecPath: '/session/logout' }
+  })
+
+  assert.throws(() => resolveE2eTarget('staging', targets), {
+    name: 'E2eConfigurationError',
+    message:
+      'The staging target\'s apiSpecPath "/session/logout" looks like an address that ends a session or changes data, which a run never requests.'
+  })
+})
+
 void test('a target can have an API run serve the demo API at its local address', () => {
   const targets = targetsWith({
     demo: { baseUrl: 'http://localhost:4010', servesDemoApi: true }

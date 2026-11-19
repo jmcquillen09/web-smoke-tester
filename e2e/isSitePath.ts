@@ -1,5 +1,8 @@
-// A second slash, or the backslash a URL reads as one, would make the next part a host name.
-const HOST_PREFIX = /^\/[/\\]/
+const PROBE_ORIGIN = 'http://site.invalid'
 
-// Whether `path` is a path from a site's root: one leading "/", so it can name no other host.
-export const isSitePath = (path: string): boolean => path.startsWith('/') && !HOST_PREFIX.test(path)
+// Whether `path` is a path from a site's root: it starts with "/" and, read as a URL does (which
+// drops tabs and takes a backslash for a slash), stays on the site it is resolved against.
+export const isSitePath = (path: string): boolean =>
+  path.startsWith('/') &&
+  URL.canParse(path, PROBE_ORIGIN) &&
+  new URL(path, PROBE_ORIGIN).origin === PROBE_ORIGIN

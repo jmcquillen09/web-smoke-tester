@@ -101,7 +101,7 @@ the run before any test starts
 ## Finding the document
 
 A target's `apiSpecPath` in [`targets.json`](../targets.json) names the document, as a path from
-the site's root. Without it the runner asks the site for each address in `OPENAPI_DOCUMENT_PATHS`
+the site's root; one that resolves to another site, or that `UNSAFE_LINK` matches, refuses the run. Without it the runner asks the site for each address in `OPENAPI_DOCUMENT_PATHS`
 ([`e2e/constants.ts`](../e2e/constants.ts)) in order and takes the first that answers with a
 document ([`e2e/discoverOpenApiDocument.ts`](../e2e/discoverOpenApiDocument.ts)).
 

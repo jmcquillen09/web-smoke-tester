@@ -61,10 +61,12 @@ export const createDemoApiServer = (): Server =>
   createServer((request, response) => {
     const isReadRequest = READ_METHODS.includes(request.method ?? '')
     const { pathname } = new URL(request.url ?? '/', 'http://demo-api.invalid')
-    const known = Object.hasOwn(ANSWERS, pathname) ? ANSWERS[pathname] : undefined
+    const hasAnswer = Object.hasOwn(ANSWERS, pathname)
+    const known = hasAnswer ? ANSWERS[pathname] : undefined
+    const isHeadRequest = request.method === 'HEAD'
     const answer = isReadRequest
       ? (known ?? NOT_FOUND)
       : json(405, { error: 'The demo API is read-only.' })
     response.writeHead(answer.status, { 'content-type': answer.contentType })
-    response.end(request.method === 'HEAD' ? undefined : answer.body)
+    response.end(isHeadRequest ? undefined : answer.body)
   })

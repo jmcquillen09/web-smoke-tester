@@ -1,4 +1,4 @@
-import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS } from './constants.ts'
+import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS, UNSAFE_LINK } from './constants.ts'
 import { assertRunnableTarget } from './assertRunnableTarget.ts'
 import type { E2eTargetSettings } from './E2eTargetSettings.ts'
 import { isSitePath } from './isSitePath.ts'
@@ -40,6 +40,16 @@ const assertSitePath = (name: string, path: string): void => {
   }
 }
 
+// A run requests the document's address, so it must be one a read-only run may request.
+const assertSafeApiSpecPath = (name: string, path: string): void => {
+  const isSafePath = !UNSAFE_LINK.test(path)
+  if (!isSafePath) {
+    throw new E2eConfigurationError(
+      `The ${name} target's apiSpecPath "${path}" looks like an address that ends a session or changes data, which a run never requests.`
+    )
+  }
+}
+
 // The one place a target name becomes a site. Every name comes from the targets file; a name it
 // does not hold, a target it switches off and a malformed entry each stop the run with the reason.
 export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTargetSettings => {
@@ -61,7 +71,10 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
   for (const path of paths) assertSitePath(name, path)
   const apiSpecPaths =
     definition.apiSpecPath === undefined ? OPENAPI_DOCUMENT_PATHS : [definition.apiSpecPath]
-  for (const path of apiSpecPaths) assertSitePath(name, path)
+  for (const path of apiSpecPaths) {
+    assertSitePath(name, path)
+    assertSafeApiSpecPath(name, path)
+  }
   const servesDemoApi = definition.servesDemoApi ?? false
   if (servesDemoApi) assertDemoApiUrl(name, siteUrl)
 

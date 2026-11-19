@@ -42,8 +42,10 @@ const resolveComponent = <T>(
   prefix: string,
   components: Readonly<Record<string, T>> = {}
 ): T | undefined => {
-  const name = reference.startsWith(prefix) ? reference.slice(prefix.length) : ''
-  return Object.hasOwn(components, name) ? components[name] : undefined
+  const hasPrefix = reference.startsWith(prefix)
+  const name = hasPrefix ? reference.slice(prefix.length) : ''
+  const hasComponent = Object.hasOwn(components, name)
+  return hasComponent ? components[name] : undefined
 }
 
 // The server an operation is requested on: the first of the servers that apply to it.
