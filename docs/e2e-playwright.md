@@ -42,9 +42,8 @@ record the run's target, the site it resolved to (`site`) and its browsers, plus
 needs its own folders uses Playwright's switches: `--output <dir>` for traces and screenshots,
 `PLAYWRIGHT_HTML_OUTPUT_DIR` and `PLAYWRIGHT_JSON_OUTPUT_FILE` for the reports.
 
-Exit codes: `0` every test passed (or failed as its target expects), `1` a test failed, the site
-or the site did not answer, `2` the run
-was refused before it started (an unknown target or browser, a disabled target, a malformed targets
+Exit codes: `0` every test passed (or failed as its target expects), `1` a test failed or the
+site did not answer, `2` the run was refused before it started (an unknown target or browser, a disabled target, a malformed targets
 file).
 
 ## The demo site
