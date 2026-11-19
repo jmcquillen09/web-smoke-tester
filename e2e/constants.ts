@@ -54,12 +54,16 @@ export const API_OPERATION_LIMIT = 50
 export const DEFAULT_CRAWL_LIMIT = 10
 // How long the crawl waits for one page before moving on without it.
 export const CRAWL_FETCH_TIMEOUT_MS = 15_000
+// How many redirects the runner follows from one address before giving up on it.
+export const FETCH_REDIRECT_LIMIT = 5
 // Same-site links whose path ends in one of these are files, not pages to test.
 export const NON_PAGE_EXTENSION =
   /\.(?:pdf|zip|gz|tar|png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|xml|txt|csv|mp3|mp4|webm|mov|woff2?|ttf|eot|docx?|xlsx?|pptx?)$/i
 // Links a read-only run never follows or requests: a GET to one may end a session or change data.
 export const UNSAFE_LINK = /log-?out|sign-?out|delete|remove|unsubscribe/i
 
+// The first status that sends the client to another address.
+export const HTTP_FIRST_REDIRECT_STATUS = 300
 // The first status that counts as a failed response.
 export const HTTP_ERROR_STATUS = 400
 // The first status that means the server itself failed, whatever the request was.
