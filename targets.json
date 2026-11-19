@@ -10,6 +10,11 @@
       "crawlLimit": 10,
       "ignoreHttpsErrors": true
     },
+    "petstore": {
+      "baseUrl": "https://petstore3.swagger.io",
+      "apiSpecPath": "/api/v3/openapi.json",
+      "crawlLimit": 0
+    },
     "google": {
       "baseUrl": "https://www.google.com",
       "crawlLimit": 3

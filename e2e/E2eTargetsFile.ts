@@ -18,6 +18,8 @@ const E2eTargetDefinitionSchema = z
       .object({ width: z.number().int().positive(), height: z.number().int().positive() })
       .strict()
       .optional(),
+    /** Where the site's OpenAPI 3 JSON document is, as a path from the site's root; the usual addresses are tried when absent. */
+    apiSpecPath: z.string().optional(),
     /** A reason that stops every run against this target until the line is removed. */
     disabled: z.string().min(1).optional()
   })

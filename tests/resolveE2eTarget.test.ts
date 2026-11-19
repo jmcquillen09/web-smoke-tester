@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import type { E2eTargetsFile } from '../e2e/E2eTargetsFile.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 
@@ -18,7 +19,8 @@ void test('a target with only a base URL tests its start page and crawls by defa
     paths: ['/'],
     crawlLimit: 10,
     ignoreHttpsErrors: false,
-    blockTracking: true
+    blockTracking: true,
+    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS]
   })
 })
 
@@ -47,7 +49,8 @@ void test('a target keeps the paths, crawl limit and certificate setting it name
     paths: ['/', '/pricing'],
     crawlLimit: 0,
     ignoreHttpsErrors: true,
-    blockTracking: true
+    blockTracking: true,
+    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS]
   })
 })
 
@@ -129,4 +132,22 @@ void test('a target without a window size has none, so the browser keeps its own
   const targets = targetsWith({ staging: { baseUrl: 'https://staging.example.com' } })
 
   assert.equal('viewport' in resolveE2eTarget('staging', targets), false)
+})
+
+void test('a target that names its OpenAPI document is looked for there only', () => {
+  const targets = targetsWith({
+    staging: { baseUrl: 'https://staging.example.com', apiSpecPath: '/api/v3/openapi.json' }
+  })
+
+  assert.deepEqual(resolveE2eTarget('staging', targets).apiSpecPaths, ['/api/v3/openapi.json'])
+})
+
+void test('an OpenAPI document path must start from the root of the site', () => {
+  const targets = targetsWith({
+    staging: { baseUrl: 'https://staging.example.com', apiSpecPath: 'https://other.example/api' }
+  })
+
+  assert.throws(() => resolveE2eTarget('staging', targets), {
+    name: 'E2eConfigurationError'
+  })
 })

@@ -11,6 +11,8 @@ export interface E2eTargetSettings {
   readonly ignoreHttpsErrors: boolean
   /** Whether analytics and marketing scripts are kept from loading. */
   readonly blockTracking: boolean
+  /** Where an API run looks for the site's OpenAPI document, in order, as paths from the site's root. */
+  readonly apiSpecPaths: readonly string[]
   /** The desktop browser window's size; absent for the browser's own default. */
   readonly viewport?: { readonly width: number; readonly height: number }
 }

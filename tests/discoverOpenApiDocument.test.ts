@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
+import type { OpenApiDocument } from '../e2e/OpenApiDocument.ts'
+
+const DOCUMENT: OpenApiDocument = { openapi: '3.1.0', paths: {} }
+const SETTINGS = {
+  target: 'staging',
+  baseUrl: 'https://staging.example.com',
+  apiSpecPaths: ['/openapi.json', '/v3/api-docs']
+}
+
+// A site as a map from address to document; an address it lacks has none. Records each one asked.
+const siteOf = (documents: Record<string, OpenApiDocument>) => {
+  const asked: string[] = []
+  const fetchOpenApiDocument = async (url: string): Promise<OpenApiDocument | undefined> => {
+    asked.push(url)
+    return documents[url]
+  }
+  return { asked, fetchOpenApiDocument }
+}
+
+void test('the first address that answers with a document is the site’s document', async () => {
+  const site = siteOf({ 'https://staging.example.com/v3/api-docs': DOCUMENT })
+
+  const discovered = await discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument)
+
+  assert.deepEqual(discovered, {
+    url: 'https://staging.example.com/v3/api-docs',
+    document: DOCUMENT
+  })
+})
+
+void test('discovery stops asking once it has found a document', async () => {
+  const site = siteOf({ 'https://staging.example.com/openapi.json': DOCUMENT })
+
+  await discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument)
+
+  assert.deepEqual(site.asked, ['https://staging.example.com/openapi.json'])
+})
+
+void test('a site with no document at any address stops the run and lists them', async () => {
+  const site = siteOf({})
+
+  await assert.rejects(discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument), {
+    name: 'E2eConfigurationError',
+    message:
+      'The staging target has no OpenAPI 3 JSON document at: https://staging.example.com/openapi.json, https://staging.example.com/v3/api-docs. Set the target\'s "apiSpecPath" to where it is.'
+  })
+})

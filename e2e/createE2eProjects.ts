@@ -12,6 +12,7 @@ const BROWSER_SETTINGS = {
   edge: { ...devices['Desktop Edge'], channel: 'msedge' }
 } satisfies Record<E2eBrowser, PlaywrightTestProject['use']>
 
+// Two projects per browser; the API specs under e2e/api/ belong to neither (e2e/createApiProject.ts).
 // Two projects per browser. workflows-<browser> runs only once every isolated-<browser> test passes,
 // so a broken stage fails as its own isolated test instead of as a user story (Playwright reports
 // the workflows "did not run"), and one browser's failures never hold back another's workflows.
@@ -27,7 +28,7 @@ export const createE2eProjects = (
       ? { ...BROWSER_SETTINGS[browser], viewport: { ...target.viewport } }
       : BROWSER_SETTINGS[browser]
     return [
-      { name: `isolated-${browser}`, testIgnore: 'workflows/**', use },
+      { name: `isolated-${browser}`, testIgnore: ['workflows/**', 'api/**'], use },
       {
         name: `workflows-${browser}`,
         testMatch: 'workflows/**/*.spec.ts',

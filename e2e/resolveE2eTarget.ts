@@ -1,4 +1,4 @@
-import { DEFAULT_CRAWL_LIMIT } from './constants.ts'
+import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS } from './constants.ts'
 import { assertRunnableTarget } from './assertRunnableTarget.ts'
 import type { E2eTargetSettings } from './E2eTargetSettings.ts'
 import type { E2eTargetsFile } from './E2eTargetsFile.ts'
@@ -45,6 +45,9 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     throw new E2eConfigurationError(`The ${name} target's paths list is empty; name at least "/".`)
   }
   for (const path of paths) assertSitePath(name, path)
+  const apiSpecPaths =
+    definition.apiSpecPath === undefined ? OPENAPI_DOCUMENT_PATHS : [definition.apiSpecPath]
+  for (const path of apiSpecPaths) assertSitePath(name, path)
 
   return {
     target: name,
@@ -53,6 +56,7 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     crawlLimit: definition.crawlLimit ?? DEFAULT_CRAWL_LIMIT,
     ignoreHttpsErrors: definition.ignoreHttpsErrors ?? false,
     blockTracking: definition.blockTracking ?? true,
+    apiSpecPaths: [...apiSpecPaths],
     ...(definition.viewport === undefined ? {} : { viewport: definition.viewport })
   }
 }
