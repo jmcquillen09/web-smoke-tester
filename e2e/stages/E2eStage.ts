@@ -1,13 +1,14 @@
+import type { ApiStageRuntime } from './ApiStageRuntime.ts'
 import type { E2eStageRuntime } from './E2eStageRuntime.ts'
 import type { E2eWorkflowState } from './E2eWorkflowState.ts'
 
 // One node of the e2e DAG. The workflow engine owns the run's state and hands it to execute, so a
 // stage never knows whether it runs isolated or inside a workflow.
-export abstract class E2eStage {
-  /** The initial config: this test's page, request and target. */
-  protected readonly runtime: E2eStageRuntime
+export abstract class E2eStage<Runtime extends ApiStageRuntime = E2eStageRuntime> {
+  /** The initial config: this test's request and target, and its page for a stage that drives one. */
+  protected readonly runtime: Runtime
 
-  constructor(runtime: E2eStageRuntime) {
+  constructor(runtime: Runtime) {
     this.runtime = runtime
   }
 

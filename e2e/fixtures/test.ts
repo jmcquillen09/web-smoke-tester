@@ -1,9 +1,7 @@
-import { test as base } from '@playwright/test'
-import { activeE2eTarget } from '../activeE2eTarget.ts'
-import type { E2eTargetSettings } from '../E2eTargetSettings.ts'
 import type { E2eStageRuntime } from '../stages/E2eStageRuntime.ts'
 import { blockThirdPartyTracking } from './blockThirdPartyTracking.ts'
 import { failOnUncaughtPageErrors } from './failOnUncaughtPageErrors.ts'
+import { targetTest } from './targetTest.ts'
 import type { UrlStatuses } from './UrlStatuses.ts'
 
 interface E2eTestFixtures {
@@ -21,14 +19,12 @@ interface E2eTestFixtures {
 }
 
 interface E2eWorkerFixtures {
-  readonly targetSettings: E2eTargetSettings
   /** The link and image statuses this worker's tests have read, so each URL is requested once. */
   readonly urlStatuses: UrlStatuses
 }
 
 // The suite's `test`: every spec gets the same target, third-party blocking and stage runtime.
-export const test = base.extend<E2eTestFixtures, E2eWorkerFixtures>({
-  targetSettings: [activeE2eTarget(), { option: true, scope: 'worker' }],
+export const test = targetTest.extend<E2eTestFixtures, E2eWorkerFixtures>({
   urlStatuses: [
     async ({}, use) => {
       await use(new Map())

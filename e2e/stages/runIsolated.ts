@@ -1,4 +1,5 @@
 import { test } from '@playwright/test'
+import type { ApiStageRuntime } from './ApiStageRuntime.ts'
 import type { E2eStage } from './E2eStage.ts'
 import type { E2eStepRunner } from './E2eStepRunner.ts'
 import type { E2eWorkflowState } from './E2eWorkflowState.ts'
@@ -8,7 +9,7 @@ import type { E2eWorkflowState } from './E2eWorkflowState.ts'
 // fails too, both errors are reported together. A failed setup built no state, so nothing is torn
 // down.
 export const runIsolated = async (
-  stage: E2eStage,
+  stage: E2eStage<ApiStageRuntime>,
   step: E2eStepRunner = test.step
 ): Promise<E2eWorkflowState> => {
   const state = await step(`${stage.title}: setup`, () => stage.setup())
