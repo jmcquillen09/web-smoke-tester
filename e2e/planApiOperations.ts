@@ -8,7 +8,12 @@ export interface ApiOperationPlan {
   readonly operations: readonly ApiOperation[]
   /** The GET operations the run leaves out, each with why. */
   readonly skipped: readonly { readonly path: string; readonly reason: string }[]
+  /** The skipped operations that lack only a value for one path parameter, with that parameter. */
+  readonly awaitingPathValues: readonly { readonly path: string; readonly parameter: string }[]
 }
+
+/** Values for path parameters the document gives no example for, by operation path then parameter. */
+export type ListedPathValues = ReadonlyMap<string, ReadonlyMap<string, string>>
 
 interface PlannedValue<T> {
   readonly kind: 'planned'
@@ -18,7 +23,13 @@ interface SkippedValue {
   readonly kind: 'skipped'
   readonly reason: string
 }
-type Planned<T> = PlannedValue<T> | SkippedValue
+// Skipped for want of one path parameter's value, which a list operation's answer may still give.
+interface AwaitingValue {
+  readonly kind: 'awaiting'
+  readonly reason: string
+  readonly parameter: string
+}
+type Planned<T> = PlannedValue<T> | SkippedValue | AwaitingValue
 
 type OpenApiPathItem = OpenApiDocument['paths'][string]
 type OpenApiOperation = NonNullable<OpenApiPathItem['get']>
@@ -40,10 +51,12 @@ const PARAMETER_REFERENCE = '#/components/parameters/'
 const RESPONSE_REFERENCE = '#/components/responses/'
 
 const API_KEY_SCHEME = 'apiKey'
+const NO_LISTED_VALUES: ReadonlyMap<string, string> = new Map()
 
 const planned = <T>(value: T): Planned<T> => ({ kind: 'planned', value })
 const skipped = (reason: string): SkippedValue => ({ kind: 'skipped', reason })
 const isPlanned = <T>(plan: Planned<T>): plan is PlannedValue<T> => plan.kind === 'planned'
+const isAwaiting = <T>(plan: Planned<T>): plan is AwaitingValue => plan.kind === 'awaiting'
 const isReference = (entry: object): entry is OpenApiReference => '$ref' in entry
 
 // The definition a `$ref` names in one components section; undefined when it names none there, or
@@ -115,12 +128,14 @@ const credentialQueryNamesOf = (document: OpenApiDocument): ReadonlySet<string> 
       .map((scheme) => scheme.name ?? '')
   )
 
-// The address to request: required path and query parameters take the document's own example values.
+// The address to request: required path and query parameters take the document's own example
+// values, and a path parameter without one takes its listed value.
 const planUrl = (
   path: string,
   parameters: readonly OpenApiParameter[],
   server: URL,
-  credentialQueryNames: ReadonlySet<string>
+  credentialQueryNames: ReadonlySet<string>,
+  listedValues: ReadonlyMap<string, string>
 ): Planned<string> => {
   let filledPath = path
   const query = new URLSearchParams()
@@ -136,12 +151,14 @@ const planUrl = (
     if (isCredential) {
       return skipped(`it requires the credential query parameter "${parameter.name}"`)
     }
-    const value = exampleOf(parameter)
+    const listedValue = isPathParameter ? listedValues.get(parameter.name) : undefined
+    const value = exampleOf(parameter) ?? listedValue
     const hasValue = value !== undefined
     if (!hasValue) {
-      return skipped(
-        `the document gives no example value for its ${parameter.in} parameter "${parameter.name}"`
-      )
+      const reason = `the document gives no example value for its ${parameter.in} parameter "${parameter.name}"`
+      return isPathParameter
+        ? { kind: 'awaiting', reason, parameter: parameter.name }
+        : skipped(reason)
     }
     if (isPathParameter) {
       filledPath = filledPath.replaceAll(`{${parameter.name}}`, encodeURIComponent(String(value)))
@@ -186,7 +203,8 @@ const planOperation = (
   documentUrl: string,
   path: string,
   item: OpenApiPathItem,
-  operation: OpenApiOperation
+  operation: OpenApiOperation,
+  listedValues: ReadonlyMap<string, string>
 ): Planned<ApiOperation> => {
   const hasSitePath = isSitePath(path)
   if (!hasSitePath) return skipped('its path does not start with one "/"')
@@ -197,7 +215,13 @@ const planOperation = (
   if (!isPlanned(server)) return server
   const parameters = planParameters(document, item, operation)
   if (!isPlanned(parameters)) return parameters
-  const url = planUrl(path, parameters.value, server.value, credentialQueryNamesOf(document))
+  const url = planUrl(
+    path,
+    parameters.value,
+    server.value,
+    credentialQueryNamesOf(document),
+    listedValues
+  )
   if (!isPlanned(url)) return url
   const responses = planResponses(document, operation)
   if (!isPlanned(responses)) return responses
@@ -220,16 +244,26 @@ const planOperation = (
 export const planApiOperations = (
   document: OpenApiDocument,
   documentUrl: string,
-  limit: number = API_OPERATION_LIMIT
+  limit: number = API_OPERATION_LIMIT,
+  listedValues: ListedPathValues = new Map()
 ): ApiOperationPlan => {
   const operations: ApiOperation[] = []
   const skippedOperations: { path: string; reason: string }[] = []
+  const awaitingPathValues: { path: string; parameter: string }[] = []
   for (const [path, item] of Object.entries(document.paths)) {
     const operation = item.get
     const hasGetOperation = operation !== undefined
     if (!hasGetOperation) continue
-    const plan = planOperation(document, documentUrl, path, item, operation)
+    const plan = planOperation(
+      document,
+      documentUrl,
+      path,
+      item,
+      operation,
+      listedValues.get(path) ?? NO_LISTED_VALUES
+    )
     const hasRoom = operations.length < limit
+    if (isAwaiting(plan)) awaitingPathValues.push({ path, parameter: plan.parameter })
     if (!isPlanned(plan)) skippedOperations.push({ path, reason: plan.reason })
     else if (hasRoom) operations.push(plan.value)
     else {
@@ -239,5 +273,5 @@ export const planApiOperations = (
       })
     }
   }
-  return { operations, skipped: skippedOperations }
+  return { operations, skipped: skippedOperations, awaitingPathValues }
 }

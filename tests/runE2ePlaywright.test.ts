@@ -30,7 +30,11 @@ void test('a run against a site with an OpenAPI document holds its web tests and
 
   assert.equal(run.code, 0, run.output)
   assert.match(run.output, /testing 3 page\(s\)/)
-  assert.match(run.output, /testing 7 GET operation\(s\)/)
+  assert.match(run.output, /testing \d+ GET operation\(s\)/)
+  assert.match(
+    run.output,
+    /requesting GET \/books\/\{bookId\}\/reviews\/\{reviewId\} with reviewId "7"/
+  )
   assert.match(run.output, WEB_TEST)
   assert.match(run.output, API_TEST)
   assert.match(run.output, /the demo site has shut down/)

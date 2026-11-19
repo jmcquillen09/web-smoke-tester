@@ -5,10 +5,11 @@ import type { E2eTargetSettings } from './E2eTargetSettings.ts'
 import { E2eApiDocumentError } from './errors/E2eApiDocumentError.ts'
 import { fetchOpenApiDocument } from './fetchOpenApiDocument.ts'
 import { findUnrequestedExpectedApiFailures } from './findUnrequestedExpectedApiFailures.ts'
-import { planApiOperations } from './planApiOperations.ts'
+import { fetchApiList } from './fetchApiList.ts'
+import { planApiOperationsWithListedValues } from './planApiOperationsWithListedValues.ts'
 
 // The operations the API tests of a run request, from the site's OpenAPI document. `log` is told
-// them, each operation left out, and each expected failure that names none of them.
+// them, each value a list gave, each operation left out, and each expected failure that names none.
 export const planApiRun = async (
   settings: Pick<E2eTargetSettings, 'target' | 'baseUrl' | 'apiSpecPaths' | 'expectedApiFailures'>,
   siteRequest: APIRequestContext,
@@ -17,10 +18,17 @@ export const planApiRun = async (
   const discovered = await discoverOpenApiDocument(settings, (url) =>
     fetchOpenApiDocument(siteRequest, url)
   )
-  const plan = planApiOperations(discovered.document, discovered.url)
+  const { plan, filled } = await planApiOperationsWithListedValues(
+    discovered.document,
+    discovered.url,
+    (url) => fetchApiList(siteRequest, url)
+  )
   log(
     `testing ${String(plan.operations.length)} GET operation(s) from ${discovered.url} (${settings.target})`
   )
+  for (const { path, parameter, value, listPath } of filled) {
+    log(`requesting GET ${path} with ${parameter} "${value}", the first GET ${listPath} lists`)
+  }
   for (const { path, reason } of plan.skipped) log(`skipping GET ${path}: ${reason}`)
   const hasOperations = plan.operations.length > 0
   if (!hasOperations) {

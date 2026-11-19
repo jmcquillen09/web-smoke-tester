@@ -11,6 +11,7 @@ const BOOKS = [
   { id: 1, title: 'The Tide Tables', authorId: 1 },
   { id: 2, title: 'A Field Guide to Fog', authorId: 2 }
 ]
+const REVIEWS = [{ id: 7, bookId: 1, rating: 5, text: 'Kept me up past high water.' }]
 const AUTHORS = [
   { id: 1, name: 'Ines Marlow' },
   { id: 2, name: 'Tomas Reed' }
@@ -28,6 +29,9 @@ export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
   '/api/books/search': jsonAnswer(200, BOOKS.slice(0, 1)),
   '/api/books/1': jsonAnswer(200, { id: 1, title: 'The Tide Tables', authorId: 1 }),
   '/api/books/2': jsonAnswer(200, { id: 2, title: 'A Field Guide to Fog', authorId: 2 }),
+  // The document gives no example for a review's id: a run takes it from this list.
+  '/api/books/1/reviews': jsonAnswer(200, REVIEWS),
+  '/api/books/1/reviews/7': jsonAnswer(200, REVIEWS[0] ?? {}),
   // Seeded bug: the document declares application/json for this answer.
   '/api/authors': {
     status: 200,

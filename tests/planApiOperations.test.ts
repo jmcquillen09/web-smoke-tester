@@ -29,7 +29,8 @@ void test('a GET operation becomes one request on the document’s server', () =
         responses: [{ status: '200', contentTypes: ['application/json'] }]
       }
     ],
-    skipped: []
+    skipped: [],
+    awaitingPathValues: []
   })
 })
 
@@ -44,7 +45,11 @@ void test('a document without servers is served from its own site’s root', () 
 void test('a path with only operations that change data plans no request', () => {
   const document = documentWith({ '/pets': {} })
 
-  assert.deepEqual(planApiOperations(document, DOCUMENT_URL), { operations: [], skipped: [] })
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL), {
+    operations: [],
+    skipped: [],
+    awaitingPathValues: []
+  })
 })
 
 void test('required path and query parameters take the document’s example values', () => {
@@ -128,7 +133,8 @@ void test('a $ref to a component that is itself a $ref skips the operation', () 
         path: '/pets',
         reason: "it has a response $ref that names no definition in the document's components"
       }
-    ]
+    ],
+    awaitingPathValues: []
   })
 })
 
@@ -183,7 +189,8 @@ void test('an operation a run cannot request safely is skipped with the reason',
         path: '/refs',
         reason: "it has a parameter $ref that names no definition in the document's components"
       }
-    ]
+    ],
+    awaitingPathValues: [{ path: '/pets/{petId}', parameter: 'petId' }]
   })
 })
 
@@ -201,7 +208,8 @@ void test('a server on another site, or with variables, skips every operation', 
         path: '/pets',
         reason: "the document's server https://other.example is another site than the document's"
       }
-    ]
+    ],
+    awaitingPathValues: []
   })
   assert.deepEqual(skippedWith('https://{region}.api.example'), {
     operations: [],
@@ -210,7 +218,8 @@ void test('a server on another site, or with variables, skips every operation', 
         path: '/pets',
         reason: "the document's server address https://{region}.api.example has variables"
       }
-    ]
+    ],
+    awaitingPathValues: []
   })
 })
 
@@ -287,7 +296,8 @@ void test('a path that names another site is never requested', () => {
       { path: '//other.example/data', reason: 'its path does not start with one "/"' },
       { path: '/\\other.example/data', reason: 'its path does not start with one "/"' },
       { path: 'pets', reason: 'its path does not start with one "/"' }
-    ]
+    ],
+    awaitingPathValues: []
   })
 })
 
@@ -331,7 +341,8 @@ void test('an address that example values or the server make unsafe is never req
       { path: '/session/{action}', reason },
       { path: '/items', reason },
       { path: '/accounts', reason }
-    ]
+    ],
+    awaitingPathValues: []
   })
 })
 
