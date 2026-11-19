@@ -3,6 +3,7 @@ import { activeE2eBrowsers } from './e2e/activeE2eBrowsers.ts'
 import { activeE2eTarget } from './e2e/activeE2eTarget.ts'
 import { JSON_REPORT_PATH } from './e2e/constants.ts'
 import { createApiProject } from './e2e/createApiProject.ts'
+import { createDemoWebServers } from './e2e/createDemoWebServers.ts'
 import { createE2eProjects } from './e2e/createE2eProjects.ts'
 import { createRunMetadata } from './e2e/createRunMetadata.ts'
 
@@ -31,6 +32,8 @@ export default defineConfig({
   retries: isCi ? 1 : 0,
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
+  // Serves the target's demo server for a run no runner started; see e2e/createDemoWebServers.ts.
+  webServer: createDemoWebServers(target),
   // A link or image check requests every address on a page, each with its own 20s limit, which does
   // not fit Playwright's 30s default per test.
   timeout: 90_000,

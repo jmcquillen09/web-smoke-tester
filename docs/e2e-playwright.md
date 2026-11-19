@@ -69,6 +69,8 @@ The `demo-site` target sets `servesDemoSite`, so the one command does the whole 
 runners and both demo servers: a site run and an API run each serve the one their target names. The run prints
 `the demo site is running at …` and `the demo site has shut down` around the tests. A port
 something else holds stops the run with the reason before any test starts.
+A run started without a runner, as an IDE's Playwright extension starts one, has Playwright serve
+the demo server itself ([`e2e/createDemoWebServers.ts`](../e2e/createDemoWebServers.ts)).
 `npm run serve:demo-site` serves the same site until stopped, to look at it by hand; stop it before
 a run against `demo-site`, which needs the port.
 

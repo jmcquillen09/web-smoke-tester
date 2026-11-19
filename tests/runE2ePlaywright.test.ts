@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import test from 'node:test'
@@ -9,6 +8,7 @@ import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
@@ -53,14 +53,7 @@ void test('a run against a site with an OpenAPI document holds its web tests and
 })
 
 void test('a site with no OpenAPI document is told so and still gets its web tests', async () => {
-  const site = createServer((_request, response) => {
-    response
-      .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-      .end('<!doctype html><title>A site</title><h1>A site with no API</h1>')
-  })
-  await new Promise<void>((resolve) => site.listen(0, HOST, resolve))
-  const baseUrl = `http://${HOST}:${String((site.address() as AddressInfo).port)}`
-  try {
+  await withSiteServing({}, async (baseUrl) => {
     const run = await listTests(targetsFileWith({ baseUrl, apiSpecPath: '/openapi.yaml' }))
 
     assert.equal(run.code, 0, run.output)
@@ -71,10 +64,21 @@ void test('a site with no OpenAPI document is told so and still gets its web tes
     assert.match(run.output, /running the web tests only/)
     assert.match(run.output, WEB_TEST)
     assert.doesNotMatch(run.output, API_TEST)
-  } finally {
-    site.closeAllConnections()
-    await new Promise<void>((resolve) => site.close(() => resolve()))
-  }
+  })
+})
+
+void test('a site whose document has no operation a run can request still gets its web tests', async () => {
+  const document = { openapi: '3.0.3', paths: { '/orders': { post: {} } } }
+
+  await withSiteServing({ '/openapi.json': document }, async (baseUrl) => {
+    const run = await listTests(targetsFileWith({ baseUrl }))
+
+    assert.equal(run.code, 0, run.output)
+    assert.match(run.output, /has no GET operation a run can request/)
+    assert.match(run.output, /running the web tests only/)
+    assert.match(run.output, WEB_TEST)
+    assert.doesNotMatch(run.output, API_TEST)
+  })
 })
 
 void test('an expected API failure the run does not request is reported and ignored, and every test still runs', async () => {

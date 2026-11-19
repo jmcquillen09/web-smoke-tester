@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// `npm run serve:demo-site`: serves the bundled demo site until stopped, to look at it by hand.
-// A run against `demo-site` serves its own and needs this one stopped.
+// `npm run serve:demo-site [address]`: serves the bundled demo site until stopped, at the
+// demo-site target's address unless another is given.
 
 import { DEMO_SITE_HOST, DEMO_SITE_PORT } from '../demo/constants.ts'
 import { demoSite } from '../demo/demoSite.ts'
 import { serveDemoServer } from '../demo/serveDemoServer.ts'
 
-await serveDemoServer('serve:demo-site', demoSite, DEMO_SITE_HOST, DEMO_SITE_PORT)
+const [address = `http://${DEMO_SITE_HOST}:${String(DEMO_SITE_PORT)}`] = process.argv.slice(2)
+
+await serveDemoServer('serve:demo-site', demoSite, address)

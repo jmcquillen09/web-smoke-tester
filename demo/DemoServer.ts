@@ -6,4 +6,6 @@ export interface DemoServer {
   readonly label: string
   /** Builds the server without starting it; the caller chooses the port with `listen`. */
   readonly create: () => Server
+  /** The script that serves it until stopped, as a path from the repo root; it takes an address. */
+  readonly script: string
 }

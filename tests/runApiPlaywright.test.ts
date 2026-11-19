@@ -8,6 +8,7 @@ import { demoApi } from '../demo/demoApi.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
@@ -107,4 +108,19 @@ void test('a run whose port is taken stops with the reason and leaves the portâ€
   } finally {
     await stopDemoServer(demoApi, holder)
   }
+})
+
+void test('a site whose document has no operation a run can request fails an API run', async () => {
+  const document = { openapi: '3.0.3', paths: { '/orders': { post: {} } } }
+
+  await withSiteServing({ '/openapi.json': document }, async (baseUrl) => {
+    const run = await runApiRunner(
+      writeTargetsFile(JSON.stringify({ defaultTarget: 'demo', targets: { demo: { baseUrl } } })),
+      ['--list']
+    )
+
+    assert.equal(run.code, 1)
+    assert.match(run.output, /has no GET operation a run can request/)
+    assert.doesNotMatch(run.output, /\[api\] â€º /)
+  })
 })

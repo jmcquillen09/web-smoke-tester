@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { DEMO_OPENAPI_FILE } from './constants.ts'
+import { DEMO_OPENAPI_FILE, DEMO_OPENAPI_PATH } from './constants.ts'
 import type { DemoAnswer } from './DemoAnswer.ts'
 import { jsonAnswer } from './jsonAnswer.ts'
 
@@ -19,7 +19,7 @@ const AUTHORS = [
 // What each address answers a reader who sent no credentials. Three answers break the document on
 // purpose: /api/authors, /api/authors/1 and /api/stats.
 export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
-  '/openapi.json': {
+  [DEMO_OPENAPI_PATH]: {
     status: 200,
     contentType: JSON_TYPE,
     body: readFileSync(path.join(import.meta.dirname, DEMO_OPENAPI_FILE), 'utf8')
