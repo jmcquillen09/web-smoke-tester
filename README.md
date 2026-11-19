@@ -25,6 +25,25 @@ A test the site's bot protection gets in the way of fails with a message that st
 Then one workflow test walks the start page as a visitor would: load it, use its links and images,
 follow a link and come back.
 
+## API checks
+
+`npm run test:api-playwright [target]` tests a site's API from the OpenAPI document it publishes.
+The runner finds the document (a target's `apiSpecPath`, or the usual addresses such as
+`/openapi.json` and `/v3/api-docs`), plans one request per `GET` operation from the document's own
+example values, and checks each answer:
+
+| Check              | An operation passes when                                                             |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| Documented status  | it answers with a status the document declares for it, and never with a server error |
+| Documented content | the answer's content type is one the document declares for that status               |
+
+Only `GET` is ever requested, with no credentials and no body, and every operation a run leaves
+out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: three
+of its operations break their own document on purpose. A run against it shows eleven passing tests
+and three expected failures, one per seeded bug, and fails if a bug goes uncaught or anything else
+is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
+document is found and which operations a run requests.
+
 ## Running
 
 - `npm install`, then `npx playwright install --with-deps chromium` (add other browsers as needed).
@@ -53,6 +72,10 @@ follow a link and come back.
   alone.
 - The HTML report lands in `playwright-report/` (`npx playwright show-report`), failure traces and
   screenshots in `test-results/`.
+- `npm run test:api-playwright [target]` runs the API checks against that target; it needs no
+  browser installed. To try them on
+  the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
+  the tests and shuts the demo API down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
   `npm run format:check` checks formatting.
 
@@ -60,9 +83,14 @@ follow a link and come back.
 
 - [`scripts/runE2ePlaywright.ts`](scripts/runE2ePlaywright.ts) resolves the target, finds the
   site's pages and starts Playwright.
+- [`scripts/runApiPlaywright.ts`](scripts/runApiPlaywright.ts) resolves the target, finds its
+  OpenAPI document, plans the operations to request and starts Playwright's `api` project.
 - Each check is a **stage** under [`e2e/stages/`](e2e/stages): a class with `setup`, `execute` and
   `teardown`. An isolated spec runs one stage on its own (`runIsolated`); a workflow spec threads
   one state through several (`runWorkflow`).
 - Each browser runs as two Playwright projects, `isolated-<browser>` and `workflows-<browser>`, the
   second gated on the first.
+- [`demo/createDemoApiServer.ts`](demo/createDemoApiServer.ts) is the bundled demo API. An API run
+  against a target that sets `servesDemoApi` starts it and shuts it down;
+  [`scripts/serveDemoApi.ts`](scripts/serveDemoApi.ts) serves it on its own.
 - Everything is TypeScript that Node runs directly; there is no build step and no other runtime.

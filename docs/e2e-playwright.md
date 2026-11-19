@@ -3,7 +3,8 @@
 The Playwright suite under [`e2e/`](../e2e) drives a real browser through basic checks against any
 website named in [`targets.json`](../targets.json). It only reads the site: it opens pages, follows
 links and requests addresses, and never submits a form or signs in. It complements the `node:test`
-suite in `tests/`, which runs without any live site.
+suite in `tests/`, which runs without any live site. The same targets, stages and runners also
+test a site's API from its OpenAPI document; see [`api-playwright.md`](api-playwright.md).
 
 ## Running it
 
@@ -54,16 +55,19 @@ A target is a named site. [`targets.json`](../targets.json) at the repo root hol
 }
 ```
 
-| Setting             | Required | Default                                | Meaning                                                                                                                                                    |
-| ------------------- | -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultTarget`     | yes      |                                        | The target a run without a name uses.                                                                                                                      |
-| `baseUrl`           | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                  |
-| `paths`             | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                            |
-| `crawlLimit`        | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                               |
-| `ignoreHttpsErrors` | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                |
-| `blockTracking`     | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
-| `viewport`          | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
-| `disabled`          | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
+| Setting               | Required | Default                                | Meaning                                                                                                                                                    |
+| --------------------- | -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultTarget`       | yes      |                                        | The target a run without a name uses.                                                                                                                      |
+| `baseUrl`             | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                  |
+| `paths`               | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                            |
+| `crawlLimit`          | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                               |
+| `ignoreHttpsErrors`   | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                |
+| `blockTracking`       | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
+| `viewport`            | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
+| `apiSpecPath`         | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.      |
+| `servesDemoApi`       | no       | `false`                                | Have an [API run](api-playwright.md) serve the bundled demo API at `baseUrl` for the length of the run. `baseUrl` must then be `http://localhost:<port>`.  |
+| `expectedApiFailures` | no       | none                                   | The API checks known to fail on this site, each `{ "path": "/stats", "check": "status" }`. See [Expected failures](api-playwright.md#expected-failures).   |
+| `disabled`            | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
 
 A misspelled setting, a missing `baseUrl`, a path that does not start with `/` and an unknown target
 name each stop the run and say what is wrong. `E2E_TARGETS_FILE` points a run at another file, for
@@ -187,7 +191,7 @@ A list runs its browsers in the order given; it cannot include `all` or name a b
 
 Each browser runs as two Playwright projects, built by
 [`e2e/createE2eProjects.ts`](../e2e/createE2eProjects.ts). `isolated-<browser>` holds every spec
-outside `e2e/workflows/`; `workflows-<browser>` holds the user-story workflow specs under
+outside `e2e/workflows/` and `e2e/api/`; `workflows-<browser>` holds the user-story workflow specs under
 [`e2e/workflows/`](../e2e/workflows) and depends on that browser's isolated project, so its
 workflows start only once every isolated test in the same browser has passed. When any isolated
 test fails, even one a workflow does not use, the report lists that browser's workflow tests as

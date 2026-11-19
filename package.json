@@ -7,6 +7,8 @@
   },
   "scripts": {
     "test:e2e-playwright": "node scripts/runE2ePlaywright.ts",
+    "test:api-playwright": "node scripts/runApiPlaywright.ts",
+    "serve:demo-api": "node scripts/serveDemoApi.ts",
     "test": "node scripts/test.ts",
     "typecheck": "node scripts/typecheck.ts",
     "format": "prettier --write .",

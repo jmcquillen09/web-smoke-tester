@@ -29,20 +29,47 @@ export const TARGETS_FILE_VARIABLE = 'E2E_TARGETS_FILE'
 export const TARGET_VARIABLE = 'E2E_TARGET'
 export const BROWSER_VARIABLE = 'E2E_BROWSER'
 export const SITE_PAGES_VARIABLE = 'E2E_SITE_PAGES'
+// How the API runner hands Playwright the operations it planned from the site's OpenAPI document (a
+// JSON array), and the project that holds the API specs.
+export const API_OPERATIONS_VARIABLE = 'E2E_API_OPERATIONS'
+export const API_PROJECT = 'api'
+
+// Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`.
+export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
+  '/openapi.json',
+  '/swagger.json',
+  '/v3/api-docs',
+  '/api-docs',
+  '/api/openapi.json',
+  '/swagger/v1/swagger.json'
+]
+// What the report shows on an API test the target's `expectedApiFailures` names.
+export const EXPECTED_API_FAILURE =
+  'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'
+// The most operations one API run requests.
+export const API_OPERATION_LIMIT = 50
 
 // How many pages the runner adds to a target's own paths by following same-site links, unless the
 // target sets `crawlLimit`; 0 turns the crawl off.
 export const DEFAULT_CRAWL_LIMIT = 10
 // How long the crawl waits for one page before moving on without it.
 export const CRAWL_FETCH_TIMEOUT_MS = 15_000
+// How many redirects the runner follows from one address before giving up on it.
+export const FETCH_REDIRECT_LIMIT = 5
 // Same-site links whose path ends in one of these are files, not pages to test.
 export const NON_PAGE_EXTENSION =
   /\.(?:pdf|zip|gz|tar|png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|xml|txt|csv|mp3|mp4|webm|mov|woff2?|ttf|eot|docx?|xlsx?|pptx?)$/i
 // Links a read-only run never follows or requests: a GET to one may end a session or change data.
 export const UNSAFE_LINK = /log-?out|sign-?out|delete|remove|unsubscribe/i
 
+// The first status that sends the client to another address.
+export const HTTP_FIRST_REDIRECT_STATUS = 300
 // The first status that counts as a failed response.
 export const HTTP_ERROR_STATUS = 400
+// The first status that means the server itself failed, whatever the request was.
+export const HTTP_SERVER_ERROR_STATUS = 500
+// What an API answers a request that carries no credentials or not the right ones.
+export const HTTP_UNAUTHENTICATED_STATUSES: readonly number[] = [401, 403]
 // What a link check records for a URL that never answered.
 export const NO_RESPONSE_STATUS = 0
 // What a link check records for a link that redirects to another site: the browser hides where a

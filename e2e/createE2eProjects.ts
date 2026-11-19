@@ -27,7 +27,7 @@ export const createE2eProjects = (
       ? { ...BROWSER_SETTINGS[browser], viewport: { ...target.viewport } }
       : BROWSER_SETTINGS[browser]
     return [
-      { name: `isolated-${browser}`, testIgnore: 'workflows/**', use },
+      { name: `isolated-${browser}`, testIgnore: ['workflows/**', 'api/**'], use },
       {
         name: `workflows-${browser}`,
         testMatch: 'workflows/**/*.spec.ts',

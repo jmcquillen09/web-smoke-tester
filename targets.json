@@ -10,6 +10,16 @@
       "crawlLimit": 10,
       "ignoreHttpsErrors": true
     },
+    "demo-api": {
+      "baseUrl": "http://localhost:4010",
+      "servesDemoApi": true,
+      "expectedApiFailures": [
+        { "path": "/authors", "check": "contentType" },
+        { "path": "/authors/{authorId}", "check": "status" },
+        { "path": "/stats", "check": "status" }
+      ],
+      "crawlLimit": 0
+    },
     "google": {
       "baseUrl": "https://www.google.com",
       "crawlLimit": 3

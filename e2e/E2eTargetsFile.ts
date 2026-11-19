@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ApiCheck } from './ApiCheck.ts'
 
 // One site in targets.json. Only `baseUrl` is required.
 const E2eTargetDefinitionSchema = z
@@ -17,6 +18,14 @@ const E2eTargetDefinitionSchema = z
     viewport: z
       .object({ width: z.number().int().positive(), height: z.number().int().positive() })
       .strict()
+      .optional(),
+    /** Where the site's OpenAPI 3 JSON document is, as a path from the site's root; the usual addresses are tried when absent. */
+    apiSpecPath: z.string().optional(),
+    /** Whether an API run serves the bundled demo API at `baseUrl` for the length of the run; false when absent. */
+    servesDemoApi: z.boolean().optional(),
+    /** The API checks known to fail on this site, each an operation's path as its document writes it and the check; none when absent. */
+    expectedApiFailures: z
+      .array(z.object({ path: z.string().startsWith('/'), check: z.enum(ApiCheck) }).strict())
       .optional(),
     /** A reason that stops every run against this target until the line is removed. */
     disabled: z.string().min(1).optional()

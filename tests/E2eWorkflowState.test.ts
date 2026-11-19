@@ -28,6 +28,24 @@ void test('a state reads back the followed link it was given', () => {
   assert.deepEqual(state.requireFollowedLink(), FOLLOWED_LINK)
 })
 
+const API_ANSWER = {
+  operation: {
+    method: 'GET' as const,
+    path: '/pets',
+    url: 'https://site.example/pets',
+    secured: false,
+    responses: [{ status: '200', contentTypes: ['application/json'] }]
+  },
+  status: 200,
+  contentType: 'application/json'
+}
+
+void test('a state reads back the API answer it was given', () => {
+  const state = E2eWorkflowState.empty().withApiAnswer(API_ANSWER)
+
+  assert.deepEqual(state.requireApiAnswer(), API_ANSWER)
+})
+
 void test('adding a value keeps the values the state already had', () => {
   const state = E2eWorkflowState.empty().withLoadedPage(LOADED_PAGE).withFollowedLink(FOLLOWED_LINK)
 
@@ -54,5 +72,9 @@ void test('requiring a value the state lacks names what is missing', () => {
   assert.throws(() => empty.requireFollowedLink(), {
     name: 'E2eFixtureError',
     message: 'The run state has no followed link.'
+  })
+  assert.throws(() => empty.requireApiAnswer(), {
+    name: 'E2eFixtureError',
+    message: 'The run state has no API answer.'
   })
 })

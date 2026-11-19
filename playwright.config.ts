@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test'
 import { activeE2eBrowsers } from './e2e/activeE2eBrowsers.ts'
 import { activeE2eTarget } from './e2e/activeE2eTarget.ts'
 import { JSON_REPORT_PATH } from './e2e/constants.ts'
+import { createApiProject } from './e2e/createApiProject.ts'
 import { createE2eProjects } from './e2e/createE2eProjects.ts'
 import { createRunMetadata } from './e2e/createRunMetadata.ts'
 
@@ -23,7 +24,8 @@ export default defineConfig({
   fullyParallel: true,
   // Shown in the HTML report and written to the JSON one, so a report says what it tested.
   metadata: createRunMetadata(target, browsers, process.env),
-  projects: createE2eProjects(browsers, target),
+  // The api project has tests only in a run `npm run test:api-playwright` starts.
+  projects: [...createE2eProjects(browsers, target), createApiProject()],
   // The JSON report tells failed assertions apart from a run that never got going. A run picks its
   // own folders with Playwright's own switches: `--output` for traces and screenshots,
   // PLAYWRIGHT_HTML_OUTPUT_DIR and PLAYWRIGHT_JSON_OUTPUT_FILE for the two reports.

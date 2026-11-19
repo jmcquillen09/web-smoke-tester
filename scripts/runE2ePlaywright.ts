@@ -10,34 +10,23 @@ import { discoverSitePages } from '../e2e/discoverSitePages.ts'
 import { fetchPageHtml } from '../e2e/fetchPageHtml.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eBrowsers } from '../e2e/resolveE2eBrowsers.ts'
-import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { takeBrowserArgument } from '../e2e/takeBrowserArgument.ts'
+import { takeE2eTarget } from '../e2e/takeE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
+import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import { spawnChild } from '../support/spawnChild.ts'
+import { stopOnConfigurationError } from '../support/stopOnConfigurationError.ts'
 
-const CONFIGURATION_EXIT_CODE = 2
-
-const stopOnConfigurationError = <T>(resolve: () => T): T => {
-  try {
-    return resolve()
-  } catch (error) {
-    console.error(`test:e2e-playwright: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(CONFIGURATION_EXIT_CODE)
-  }
-}
+const COMMAND = 'test:e2e-playwright'
 
 const { choice: browser, rest: args } = takeBrowserArgument(process.argv.slice(2))
 // Checked here so a bad choice stops the run before the crawl; playwright.config.ts resolves the
 // same E2E_BROWSER and E2E_TARGET values again through the same functions.
-stopOnConfigurationError(() => resolveE2eBrowsers(browser))
+stopOnConfigurationError(COMMAND, () => resolveE2eBrowsers(browser))
 
-const [first = ''] = args
-const hasTargetArgument = first !== '' && !first.startsWith('-')
-const playwrightArgs = hasTargetArgument ? args.slice(1) : args
-const settings = stopOnConfigurationError(() => {
-  const targets = readE2eTargets(targetsFilePath(process.env))
-  return resolveE2eTarget(hasTargetArgument ? first : targets.defaultTarget, targets)
-})
+const { settings, rest: playwrightArgs } = stopOnConfigurationError(COMMAND, () =>
+  takeE2eTarget(args, readE2eTargets(targetsFilePath(process.env)))
+)
 
 // Node runs Playwright's CLI module directly; spawning `npx` fails on Windows, where it is a .cmd shim.
 const playwrightCli = createRequire(import.meta.url).resolve('@playwright/test/cli')
@@ -45,9 +34,11 @@ const playwrightCli = createRequire(import.meta.url).resolve('@playwright/test/c
 const repoRoot = path.join(import.meta.dirname, '..')
 
 try {
-  const pages = await discoverSitePages(settings, fetchPageHtml)
+  const pages = await withSiteRequest(settings, (siteRequest) =>
+    discoverSitePages(settings, (url) => fetchPageHtml(siteRequest, url))
+  )
   console.log(
-    `test:e2e-playwright: testing ${String(pages.length)} page(s) on ${settings.baseUrl} (${settings.target}): ${pages.join(', ')}`
+    `${COMMAND}: testing ${String(pages.length)} page(s) on ${settings.baseUrl} (${settings.target}): ${pages.join(', ')}`
   )
   const outcome = await spawnChild(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
     cwd: repoRoot,
@@ -62,6 +53,6 @@ try {
   if (outcome.kind === 'signalled') process.kill(process.pid, outcome.signal)
   process.exit(outcome.kind === 'exited' ? outcome.code : 1)
 } catch (error) {
-  console.error(`test:e2e-playwright: ${error instanceof Error ? error.message : String(error)}`)
+  console.error(`${COMMAND}: ${error instanceof Error ? error.message : String(error)}`)
   process.exit(1)
 }

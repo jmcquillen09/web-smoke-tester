@@ -53,12 +53,12 @@ void test('safari runs WebKit and edge runs the installed Microsoft Edge', () =>
   )
 })
 
-void test('only workflows projects run the specs under e2e/workflows/', () => {
+void test('only workflows projects run the specs under e2e/workflows/, and neither runs e2e/api/', () => {
   const [isolated, workflows] = createE2eProjects(['firefox'])
 
   assert.deepEqual(
     { isolatedIgnores: isolated?.testIgnore, workflowsMatches: workflows?.testMatch },
-    { isolatedIgnores: 'workflows/**', workflowsMatches: 'workflows/**/*.spec.ts' }
+    { isolatedIgnores: ['workflows/**', 'api/**'], workflowsMatches: 'workflows/**/*.spec.ts' }
   )
 })
 

@@ -9,7 +9,10 @@ const SETTINGS = {
   paths: ['/', '/pricing'],
   crawlLimit: 10,
   ignoreHttpsErrors: false,
-  blockTracking: true
+  blockTracking: true,
+  apiSpecPaths: ['/openapi.json'],
+  servesDemoApi: false,
+  expectedApiFailures: []
 }
 
 void test('without pages from the runner, a run tests the target’s own paths', () => {
