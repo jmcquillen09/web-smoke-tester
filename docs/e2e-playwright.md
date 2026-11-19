@@ -24,7 +24,9 @@ Three commands run the tests, each against a target:
 
 `test:e2e-playwright` looks for the site's OpenAPI document as an API run does. A site that
 publishes none, or one with no operation a run can request, is told so in the same words, and the
-run goes on with the web tests alone: a missing document does not fail it.
+run goes on with the web tests alone: a missing document does not fail it. An `expectedApiFailures`
+entry that names an operation the run does not request is reported the same way, and the API tests
+are left out of that run.
 
 Arguments after the target pass straight to `playwright test`, for example
 `npm run test:e2e-playwright -- staging e2e/brokenLinks.spec.ts --headed` or
@@ -41,7 +43,7 @@ needs its own folders uses Playwright's switches: `--output <dir>` for traces an
 `PLAYWRIGHT_HTML_OUTPUT_DIR` and `PLAYWRIGHT_JSON_OUTPUT_FILE` for the reports.
 
 Exit codes: `0` every test passed (or failed as its target expects), `1` a test failed, the site
-did not answer or an expected API failure names an operation the run does not request, `2` the run
+or the site did not answer, `2` the run
 was refused before it started (an unknown target or browser, a disabled target, a malformed targets
 file).
 

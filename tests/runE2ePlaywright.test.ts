@@ -77,7 +77,7 @@ void test('a site with no OpenAPI document is told so and still gets its web tes
   }
 })
 
-void test('an expected API failure the run does not request still stops the run', async () => {
+void test('an expected API failure the run does not request is reported, and the web tests still run', async () => {
   const free = await startDemoServer(demoSite, 0, HOST)
   const { port } = free.address() as AddressInfo
   await stopDemoServer(demoSite, free)
@@ -90,9 +90,11 @@ void test('an expected API failure the run does not request still stops the run'
     })
   )
 
-  assert.equal(run.code, 1)
+  assert.equal(run.code, 0, run.output)
   assert.match(run.output, /expects a failure on GET \/no-such-operation/)
-  assert.doesNotMatch(run.output, WEB_TEST)
+  assert.match(run.output, /running the web tests only/)
+  assert.match(run.output, WEB_TEST)
+  assert.doesNotMatch(run.output, API_TEST)
   assert.match(run.output, /the demo site has shut down/)
 })
 

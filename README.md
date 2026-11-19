@@ -64,7 +64,8 @@ document is found and which operations a run requests.
   ```
 
 - `npm run test:e2e-playwright [target]` runs the web tests and the API tests against that target
-  in one run. A site with no OpenAPI document is told so and gets its web tests alone. With no
+  in one run. A site whose API tests cannot be planned (no OpenAPI document, or an expected failure
+  the run does not request) is told so and gets its web tests alone. With no
   target it uses the `defaultTarget`, the bundled demo site: the run starts the site, tests it and
   shuts it down again, and every check passes.
 - `npm run test:web-playwright [target]` runs only the web tests. Read [`docs/e2e-playwright.md`](docs/e2e-playwright.md) for every target

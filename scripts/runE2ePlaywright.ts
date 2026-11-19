@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: runs the web tests and
-// the API tests in one `playwright test`. A site with no OpenAPI document gets the web tests alone.
+// the API tests in one `playwright test`. A site whose API tests cannot be planned gets the web tests alone.
 
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
 import { API_OPERATIONS_VARIABLE, BROWSER_VARIABLE, SITE_PAGES_VARIABLE } from '../e2e/constants.ts'
 import { E2eApiDocumentError } from '../e2e/errors/E2eApiDocumentError.ts'
+import { E2eConfigurationError } from '../e2e/errors/E2eConfigurationError.ts'
 import { planApiRun } from '../e2e/planApiRun.ts'
 import { planWebRun } from '../e2e/planWebRun.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
@@ -30,9 +31,10 @@ const { settings, rest: playwrightArgs } = stopOnConfigurationError(COMMAND, () 
 await runPlaywrightForTarget(COMMAND, settings, playwrightArgs, async (siteRequest, log) => {
   const pages = await planWebRun(settings, siteRequest, log)
   const operations = await planApiRun(settings, siteRequest, log).catch((error: unknown) => {
-    const hasNoDocument = error instanceof E2eApiDocumentError
-    if (!hasNoDocument) throw error
-    // The site has no API a run can test; that is said, and its pages are tested all the same.
+    const isApiPlanRefusal =
+      error instanceof E2eApiDocumentError || error instanceof E2eConfigurationError
+    if (!isApiPlanRefusal) throw error
+    // No document to test, or an expected failure it does not hold: said, and the pages are tested.
     console.error(`${COMMAND}: ${error.message}`)
     log('running the web tests only')
     return NO_OPERATIONS

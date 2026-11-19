@@ -6,7 +6,8 @@ needs no access to the API's code and only ever reads: no other method is reques
 are sent, and no request body is built.
 
 `npm run test:e2e-playwright [target]` runs these same API tests together with the web tests. There
-a site with no document to test is told so and gets its web tests alone; here it fails the run.
+a site with no document to test, or an expected failure the run does not request, is told so and
+gets its web tests alone; here either fails the run.
 
 It shares the site suite's targets, stages, runners and reports; read
 [`e2e-playwright.md`](e2e-playwright.md) for those. This page covers what is particular to the API
