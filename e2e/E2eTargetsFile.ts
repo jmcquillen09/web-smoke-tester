@@ -1,0 +1,35 @@
+import { z } from 'zod'
+
+// One site in targets.json. Only `baseUrl` is required.
+const E2eTargetDefinitionSchema = z
+  .object({
+    /** The site's address, with its start path if it has one: `https://www.example.com`. */
+    baseUrl: z.string(),
+    /** The pages every run tests, as paths from the site's root; the base URL's own path when absent. */
+    paths: z.array(z.string()).optional(),
+    /** How many more pages the runner may add by following same-site links; 0 turns the crawl off. */
+    crawlLimit: z.number().int().min(0).optional(),
+    /** Accept a self-signed or otherwise invalid certificate, as a local or staging site may have. */
+    ignoreHttpsErrors: z.boolean().optional(),
+    /** Whether analytics and marketing scripts are kept from loading; true when absent. */
+    blockTracking: z.boolean().optional(),
+    /** The desktop browser window's size, in place of the browser's own default. */
+    viewport: z
+      .object({ width: z.number().int().positive(), height: z.number().int().positive() })
+      .strict()
+      .optional(),
+    /** A reason that stops every run against this target until the line is removed. */
+    disabled: z.string().min(1).optional()
+  })
+  .strict()
+
+// targets.json: every site a run can name, and the one a run without a name uses.
+export const E2eTargetsFileSchema = z
+  .object({
+    defaultTarget: z.string().min(1),
+    targets: z.record(z.string(), E2eTargetDefinitionSchema)
+  })
+  .strict()
+
+export type E2eTargetDefinition = z.infer<typeof E2eTargetDefinitionSchema>
+export type E2eTargetsFile = z.infer<typeof E2eTargetsFileSchema>

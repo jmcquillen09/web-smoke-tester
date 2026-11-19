@@ -1,0 +1,22 @@
+{
+  "defaultTarget": "example",
+  "targets": {
+    "example": {
+      "baseUrl": "https://example.com"
+    },
+    "local": {
+      "baseUrl": "http://localhost:3000",
+      "paths": ["/"],
+      "crawlLimit": 10,
+      "ignoreHttpsErrors": true
+    },
+    "google": {
+      "baseUrl": "https://www.google.com",
+      "crawlLimit": 3
+    },
+    "jj-keller": {
+      "baseUrl": "https://www.jjkeller.com",
+      "crawlLimit": 3
+    }
+  }
+}

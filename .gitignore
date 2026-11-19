@@ -1,0 +1,25 @@
+node_modules/
+.env
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.stack/
+docs/plans/
+
+# Kept local, not published: git hooks, agent files, and the patterns and standards docs.
+/.githooks/
+/.github/
+/.agents/
+/.codex/
+/.mcp.json
+/opencode.json
+/AGENTS.md
+/CLAUDE.md
+/REVIEW.md
+/docs/patterns/
+/docs/standards/
+/docs/agent-hooks.md
+/docs/ci-mandatory-actions.md
+/docs/mcp.md
+/docs/specs-and-plans.md

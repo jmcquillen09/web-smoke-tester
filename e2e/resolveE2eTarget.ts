@@ -1,0 +1,58 @@
+import { DEFAULT_CRAWL_LIMIT } from './constants.ts'
+import { assertRunnableTarget } from './assertRunnableTarget.ts'
+import type { E2eTargetSettings } from './E2eTargetSettings.ts'
+import type { E2eTargetsFile } from './E2eTargetsFile.ts'
+import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
+
+const WEB_PROTOCOLS: readonly string[] = ['http:', 'https:']
+
+const siteUrlOf = (name: string, baseUrl: string): URL => {
+  const isUrl = URL.canParse(baseUrl)
+  const isWebUrl = isUrl && WEB_PROTOCOLS.includes(new URL(baseUrl).protocol)
+  if (!isWebUrl) {
+    throw new E2eConfigurationError(
+      `The ${name} target's baseUrl "${baseUrl}" is not an http or https URL.`
+    )
+  }
+  return new URL(baseUrl)
+}
+
+const assertSitePath = (name: string, path: string): void => {
+  const isSitePath = path.startsWith('/') && !path.startsWith('//')
+  if (!isSitePath) {
+    throw new E2eConfigurationError(
+      `The ${name} target's path "${path}" must start with one "/", as a path from the site's root.`
+    )
+  }
+}
+
+// The one place a target name becomes a site. Every name comes from the targets file; a name it
+// does not hold, a target it switches off and a malformed entry each stop the run with the reason.
+export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTargetSettings => {
+  const definition = Object.hasOwn(targets.targets, name) ? targets.targets[name] : undefined
+  const isKnownTarget = definition !== undefined
+  if (!isKnownTarget) {
+    throw new E2eConfigurationError(
+      `Unknown e2e target "${name}". Expected one of: ${Object.keys(targets.targets).join(', ')}.`
+    )
+  }
+  assertRunnableTarget(name, definition)
+
+  const siteUrl = siteUrlOf(name, definition.baseUrl)
+  const paths = definition.paths ?? [`${siteUrl.pathname}${siteUrl.search}`]
+  const hasPaths = paths.length > 0
+  if (!hasPaths) {
+    throw new E2eConfigurationError(`The ${name} target's paths list is empty; name at least "/".`)
+  }
+  for (const path of paths) assertSitePath(name, path)
+
+  return {
+    target: name,
+    baseUrl: siteUrl.origin,
+    paths: [...new Set(paths)],
+    crawlLimit: definition.crawlLimit ?? DEFAULT_CRAWL_LIMIT,
+    ignoreHttpsErrors: definition.ignoreHttpsErrors ?? false,
+    blockTracking: definition.blockTracking ?? true,
+    ...(definition.viewport === undefined ? {} : { viewport: definition.viewport })
+  }
+}

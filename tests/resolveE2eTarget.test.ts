@@ -1,0 +1,132 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
+import type { E2eTargetsFile } from '../e2e/E2eTargetsFile.ts'
+import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
+
+const targetsWith = (targets: E2eTargetsFile['targets']): E2eTargetsFile => ({
+  defaultTarget: 'staging',
+  targets
+})
+
+void test('a target with only a base URL tests its start page and crawls by default', () => {
+  const targets = targetsWith({ staging: { baseUrl: 'https://staging.example.com' } })
+
+  assert.deepEqual(resolveE2eTarget('staging', targets), {
+    target: 'staging',
+    baseUrl: 'https://staging.example.com',
+    paths: ['/'],
+    crawlLimit: 10,
+    ignoreHttpsErrors: false,
+    blockTracking: true
+  })
+})
+
+void test('a base URL with a path starts there, and the site is its origin', () => {
+  const targets = targetsWith({ docs: { baseUrl: 'https://example.com/docs/?lang=en' } })
+
+  const settings = resolveE2eTarget('docs', targets)
+
+  assert.equal(settings.baseUrl, 'https://example.com')
+  assert.deepEqual(settings.paths, ['/docs/?lang=en'])
+})
+
+void test('a target keeps the paths, crawl limit and certificate setting it names', () => {
+  const targets = targetsWith({
+    local: {
+      baseUrl: 'https://localhost:3000',
+      paths: ['/', '/pricing', '/'],
+      crawlLimit: 0,
+      ignoreHttpsErrors: true
+    }
+  })
+
+  assert.deepEqual(resolveE2eTarget('local', targets), {
+    target: 'local',
+    baseUrl: 'https://localhost:3000',
+    paths: ['/', '/pricing'],
+    crawlLimit: 0,
+    ignoreHttpsErrors: true,
+    blockTracking: true
+  })
+})
+
+void test('an unknown target name lists the names the file holds', () => {
+  const targets = targetsWith({
+    staging: { baseUrl: 'https://staging.example.com' },
+    production: { baseUrl: 'https://www.example.com' }
+  })
+
+  assert.throws(() => resolveE2eTarget('nowhere', targets), {
+    name: 'E2eConfigurationError',
+    message: 'Unknown e2e target "nowhere". Expected one of: staging, production.'
+  })
+})
+
+void test('a name that is only an object built-in is not a target', () => {
+  const targets = targetsWith({ staging: { baseUrl: 'https://staging.example.com' } })
+
+  assert.throws(() => resolveE2eTarget('constructor', targets), /Unknown e2e target "constructor"/)
+})
+
+void test('a disabled target refuses to run and gives its reason', () => {
+  const targets = targetsWith({
+    production: { baseUrl: 'https://www.example.com', disabled: 'waiting for sign-off' }
+  })
+
+  assert.throws(() => resolveE2eTarget('production', targets), {
+    name: 'E2eConfigurationError',
+    message: 'Refusing the production target: waiting for sign-off.'
+  })
+})
+
+void test('a base URL that is not a web address is refused by name', () => {
+  for (const baseUrl of ['staging.example.com', 'ftp://example.com', '']) {
+    const targets = targetsWith({ staging: { baseUrl } })
+
+    assert.throws(() => resolveE2eTarget('staging', targets), {
+      name: 'E2eConfigurationError',
+      message: `The staging target's baseUrl "${baseUrl}" is not an http or https URL.`
+    })
+  }
+})
+
+void test('a path must start from the root of the site', () => {
+  for (const path of ['pricing', 'https://other.example/', '//other.example/']) {
+    const targets = targetsWith({
+      staging: { baseUrl: 'https://staging.example.com', paths: [path] }
+    })
+
+    assert.throws(
+      () => resolveE2eTarget('staging', targets),
+      (error: unknown) => error instanceof Error && error.message.includes(`path "${path}"`)
+    )
+  }
+})
+
+void test('an empty paths list is refused rather than testing nothing', () => {
+  const targets = targetsWith({ staging: { baseUrl: 'https://staging.example.com', paths: [] } })
+
+  assert.throws(() => resolveE2eTarget('staging', targets), /paths list is empty/)
+})
+
+void test('a target can leave analytics unblocked and size its own desktop window', () => {
+  const targets = targetsWith({
+    staging: {
+      baseUrl: 'https://staging.example.com',
+      blockTracking: false,
+      viewport: { width: 1920, height: 1080 }
+    }
+  })
+
+  const settings = resolveE2eTarget('staging', targets)
+
+  assert.equal(settings.blockTracking, false)
+  assert.deepEqual(settings.viewport, { width: 1920, height: 1080 })
+})
+
+void test('a target without a window size has none, so the browser keeps its own', () => {
+  const targets = targetsWith({ staging: { baseUrl: 'https://staging.example.com' } })
+
+  assert.equal('viewport' in resolveE2eTarget('staging', targets), false)
+})
