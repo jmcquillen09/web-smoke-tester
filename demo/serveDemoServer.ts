@@ -5,7 +5,8 @@ import { startDemoServer } from './startDemoServer.ts'
 // Where to listen. A demo server speaks plain http on a port the address names; the address given
 // is never printed back, since it may carry a password.
 const listenAddressOf = (demo: DemoServer, baseUrl: string): URL => {
-  const address = URL.canParse(baseUrl) ? new URL(baseUrl) : new URL('about:blank')
+  const isUrl = URL.canParse(baseUrl)
+  const address = isUrl ? new URL(baseUrl) : new URL('about:blank')
   const isServable =
     address.protocol === 'http:' &&
     address.port !== '' &&
