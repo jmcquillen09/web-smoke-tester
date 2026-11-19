@@ -10,9 +10,6 @@
         { "path": "/stats", "check": "status" }
       ]
     },
-    "example": {
-      "baseUrl": "https://example.com"
-    },
     "local": {
       "baseUrl": "http://localhost:3000",
       "paths": ["/"],
