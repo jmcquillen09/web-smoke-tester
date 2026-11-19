@@ -96,7 +96,7 @@ void test('the document’s own example is used, and its list is not read', asyn
   assert.deepEqual(api.asked, [])
 })
 
-void test('a list that offers no value leaves the operation skipped, saying which list', async () => {
+void test('a list that answers with no value leaves the operation skipped, saying which list', async () => {
   const document = documentWith({
     '/pets': { get: { responses: OK } },
     '/pets/{petId}': { get: { parameters: [pathParameter('petId')], responses: OK } },
@@ -111,12 +111,12 @@ void test('a list that offers no value leaves the operation skipped, saying whic
     {
       path: '/pets/{petId}',
       reason:
-        'the document gives no example value for its path parameter "petId", and GET /pets lists none'
+        'the document gives no example value for its path parameter "petId", and GET /pets answered with none'
     },
     {
       path: '/owners/{ownerId}',
       reason:
-        'the document gives no example value for its path parameter "ownerId", and GET /owners lists none'
+        'the document gives no example value for its path parameter "ownerId", and GET /owners answered with none'
     }
   ])
 })
@@ -227,4 +227,33 @@ void test('a list operation that carries a query is still the list one level up'
   const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
 
   assert.equal(plan.operations.at(-1)?.url, 'https://api.example/pets/7')
+})
+
+void test('a list that becomes requestable only once another value is found is still read', async () => {
+  const document = documentWith({
+    '/pets': { get: { responses: OK } },
+    '/pets/{petId}/visits/{visitId}': {
+      get: {
+        parameters: [{ ...pathParameter('petId'), example: 7 }, pathParameter('visitId')],
+        responses: OK
+      }
+    },
+    '/pets/{petId}/visits': { get: { parameters: [pathParameter('petId')], responses: OK } }
+  })
+  const api = apiOf({
+    'https://api.example/pets': [{ id: 7 }],
+    'https://api.example/pets/7/visits': [{ id: 3 }]
+  })
+
+  const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
+
+  assert.deepEqual(
+    plan.operations.map((operation) => operation.url),
+    [
+      'https://api.example/pets',
+      'https://api.example/pets/7/visits/3',
+      'https://api.example/pets/7/visits'
+    ]
+  )
+  assert.deepEqual(plan.skipped, [])
 })

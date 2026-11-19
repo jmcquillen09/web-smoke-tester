@@ -134,11 +134,11 @@ same site and never to an address `UNSAFE_LINK` matches
   parameter, skip the operation.
 - **A path parameter with no such value takes one from a list.** The runner reads the answer of the
   list operation one level up (`GET /books/{bookId}/reviews` for `reviewId` in
-  `/books/{bookId}/reviews/{reviewId}`), when the run requests that operation anyway, and takes its
-  first item's property named as the parameter, else its `id`
+  `/books/{bookId}/reviews/{reviewId}`), when the run requests that operation anyway at that very
+  address, and takes its first item's property named as the parameter, else its `id`
   ([`e2e/planApiOperationsWithListedValues.ts`](../e2e/planApiOperationsWithListedValues.ts)).
   Nested parameters are filled outermost first, and the run says which value it took. An operation
-  with no such list, or whose list offers no value, is skipped with the reason.
+  with no such list, or whose list answers with no value, is skipped with the reason.
 - **No credentials, even ones the document offers.** A required query parameter that one of the
   document's `apiKey` security schemes names skips the operation, whatever example it carries.
 - **An address `UNSAFE_LINK` matches is never requested** (`logout`, `delete` and the like), as in

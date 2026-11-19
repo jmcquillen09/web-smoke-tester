@@ -33,7 +33,8 @@ export const planApiOperationsWithListedValues = async (
   const values = new Map<string, Map<string, string>>()
   const filled: ApiOperationPlanWithListedValues['filled'][number][] = []
   const emptyListPaths = new Map<string, string>()
-  const asked = new Set<string>()
+  const read = new Set<string>()
+  let hasNewValue = true
   const lists = new Map<string, Promise<string | undefined>>()
   const readList = (url: string): Promise<string | undefined> => {
     const list = lists.get(url) ?? fetchApiList(url)
@@ -44,24 +45,26 @@ export const planApiOperationsWithListedValues = async (
   for (;;) {
     const plan = planApiOperations(document, documentUrl, undefined, values)
     const waiting = plan.awaitingPathValues.filter(
-      ({ path, parameter }) => !asked.has(`${path} ${parameter}`)
+      ({ path, parameter }) => !read.has(`${path} ${parameter}`)
     )
-    const hasWaiting = waiting.length > 0
-    if (!hasWaiting) {
+    // A list may only become requestable once another value is found, so rounds go on while one is.
+    const canFillMore = waiting.length > 0 && hasNewValue
+    if (!canFillMore) {
       const skipped = plan.skipped.map((entry) => {
         const listPath = emptyListPaths.get(entry.path) ?? ''
         const hasEmptyList = listPath !== ''
         return hasEmptyList
-          ? { ...entry, reason: `${entry.reason}, and GET ${listPath} lists none` }
+          ? { ...entry, reason: `${entry.reason}, and GET ${listPath} answered with none` }
           : entry
       })
       return { plan: { ...plan, skipped }, filled }
     }
+    hasNewValue = false
     for (const { path, parameter, listUrl } of waiting) {
-      asked.add(`${path} ${parameter}`)
       const list = plan.operations.find((operation) => withoutQuery(operation.url) === listUrl)
       const hasList = list !== undefined
       if (!hasList) continue
+      read.add(`${path} ${parameter}`)
       const body = (await readList(list.url)) ?? ''
       const value = findListedPathValue(body, parameter) ?? ''
       const hasValue = value !== ''
@@ -70,6 +73,7 @@ export const planApiOperationsWithListedValues = async (
         continue
       }
       values.set(path, new Map(values.get(path)).set(parameter, value))
+      hasNewValue = true
       filled.push({ path, parameter, value, listPath: list.path })
     }
   }
