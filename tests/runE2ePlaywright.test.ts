@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import test from 'node:test'
@@ -9,6 +8,7 @@ import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
+import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
@@ -22,18 +22,7 @@ const targetsFileWith = (target: object): string =>
 // Runs the combined runner with `--list`, which has Playwright name the tests without opening a
 // browser, and resolves with its exit code and everything it printed.
 const listTests = (targetsFile: string): Promise<{ code: number; output: string }> =>
-  new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [RUNNER, 'site', '--list'], {
-      env: { ...process.env, [TARGETS_FILE_VARIABLE]: targetsFile }
-    })
-    let output = ''
-    child.stdout.on('data', (chunk: Buffer) => (output += chunk.toString()))
-    child.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()))
-    child.on('error', reject)
-    child.on('close', (code) => {
-      resolve({ code: code ?? 1, output })
-    })
-  })
+  runNodeScript([RUNNER, 'site', '--list'], { [TARGETS_FILE_VARIABLE]: targetsFile })
 
 void test('a run against a site with an OpenAPI document holds its web tests and its API tests', async () => {
   const free = await startDemoServer(demoSite, 0, HOST)

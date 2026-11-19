@@ -8,8 +8,9 @@ export const findUnrequestedExpectedApiFailures = (
   operations: readonly Pick<ApiOperation, 'path'>[]
 ): readonly string[] => {
   const requestedPaths = operations.map((operation) => operation.path)
+  const isRequestedPath = (path: string): boolean => requestedPaths.includes(path)
   const unrequested = settings.expectedApiFailures
     .map((expected) => expected.path)
-    .filter((path) => !requestedPaths.includes(path))
+    .filter((path) => !isRequestedPath(path))
   return [...new Set(unrequested)]
 }

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
 import { mkdtempSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import type { AddressInfo } from 'node:net'
@@ -17,10 +16,10 @@ import {
   TARGET_VARIABLE,
   TARGETS_FILE_VARIABLE
 } from '../e2e/constants.ts'
+import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
-const REPO_ROOT = path.join(import.meta.dirname, '..')
 const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/cli')
 
 // Runs the status spec on one `/stats` operation of a demo API whose target expects that check to
@@ -44,36 +43,22 @@ const runStatusSpec = async (
     ...operationOf(baseUrl)
   }
   try {
-    return await new Promise((resolve, reject) => {
-      const child = spawn(
-        process.execPath,
-        [
-          PLAYWRIGHT_CLI,
-          'test',
-          `--project=${API_PROJECT}`,
-          '--grep=status',
-          '--reporter=list',
-          `--output=${path.join(scratch, 'results')}`
-        ],
-        {
-          cwd: REPO_ROOT,
-          env: {
-            ...process.env,
-            PLAYWRIGHT_BROWSERS_PATH: path.join(scratch, 'no-browsers'),
-            [TARGETS_FILE_VARIABLE]: targetsFile,
-            [TARGET_VARIABLE]: 'site',
-            [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
-          }
-        }
-      )
-      let output = ''
-      child.stdout.on('data', (chunk: Buffer) => (output += chunk.toString()))
-      child.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()))
-      child.on('error', reject)
-      child.on('close', (code) => {
-        resolve({ code: code ?? 1, output })
-      })
-    })
+    return await runNodeScript(
+      [
+        PLAYWRIGHT_CLI,
+        'test',
+        `--project=${API_PROJECT}`,
+        '--grep=status',
+        '--reporter=list',
+        `--output=${path.join(scratch, 'results')}`
+      ],
+      {
+        PLAYWRIGHT_BROWSERS_PATH: path.join(scratch, 'no-browsers'),
+        [TARGETS_FILE_VARIABLE]: targetsFile,
+        [TARGET_VARIABLE]: 'site',
+        [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
+      }
+    )
   } finally {
     await stopDemoServer(demoApi, server)
   }
