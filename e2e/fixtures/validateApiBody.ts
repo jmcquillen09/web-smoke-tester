@@ -3,7 +3,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js'
 import { JSON_SCHEMA_2020_12, MAX_LISTED_FINDINGS } from '../constants.ts'
 import type { JsonObject } from '../JsonObject.ts'
 import type { ApiAnswer } from './ApiAnswer.ts'
-import type { ApiBodyValidation } from './ApiBodyValidation.ts'
+import type { ApiCheckResult } from './ApiCheckResult.ts'
 import { findDeclaredApiResponse } from './findDeclaredApiResponse.ts'
 import { isDeclaredContentType } from './isDeclaredContentType.ts'
 
@@ -13,7 +13,7 @@ const WILDCARD = /\*/g
 // this check does not judge.
 const VALIDATOR_OPTIONS = { strict: false, validateFormats: false, allErrors: true }
 
-const unvalidated = (reason: string): ApiBodyValidation => ({ kind: 'unvalidated', reason })
+const unchecked = (reason: string): ApiCheckResult => ({ kind: 'unchecked', reason })
 
 const wildcardCountOf = (contentType: string): number => (contentType.match(WILDCARD) ?? []).length
 
@@ -35,16 +35,16 @@ const describe = (error: ErrorObject): string => {
 }
 
 // Holds an answer's JSON body against the schema the document declares for the answered status and
-// content type. An answer that is not JSON, or has no usable schema declared, is left unvalidated.
-export const validateApiBody = (answer: ApiAnswer): ApiBodyValidation => {
+// content type. An answer that is not JSON, or has no usable schema declared, is left unchecked.
+export const validateApiBody = (answer: ApiAnswer): ApiCheckResult => {
   const isJsonAnswer = JSON_CONTENT_TYPE.test(answer.contentType)
   if (!isJsonAnswer) {
-    return unvalidated(`the answer is ${answer.contentType || 'of no content type'}, not JSON`)
+    return unchecked(`the answer is ${answer.contentType || 'of no content type'}, not JSON`)
   }
   const schema = findBodySchema(answer)
   const hasSchema = schema !== undefined
   if (!hasSchema) {
-    return unvalidated(
+    return unchecked(
       `the document declares no schema for an HTTP ${String(answer.status)} answer as ${answer.contentType}`
     )
   }
@@ -56,14 +56,14 @@ export const validateApiBody = (answer: ApiAnswer): ApiBodyValidation => {
     validate = validator.compile(schema)
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
-    return unvalidated(`the document's schema for this answer cannot be used: ${reason}`)
+    return unchecked(`the document's schema for this answer cannot be used: ${reason}`)
   }
 
   let body: unknown
   try {
     body = JSON.parse(answer.body)
   } catch {
-    return { kind: 'validated', problems: ['the body is not valid JSON'] }
+    return { kind: 'checked', problems: ['the body is not valid JSON'] }
   }
   validate(body)
   const problems = (validate.errors ?? []).map(describe)
@@ -71,7 +71,7 @@ export const validateApiBody = (answer: ApiAnswer): ApiBodyValidation => {
   const unlisted = problems.length - listed.length
   const hasUnlistedProblems = unlisted > 0
   return {
-    kind: 'validated',
+    kind: 'checked',
     problems: hasUnlistedProblems ? [...listed, `…and ${String(unlisted)} more`] : listed
   }
 }

@@ -77,7 +77,7 @@ void test('a document with a malformed operation is no document', () => {
   assert.equal(OpenApiDocumentSchema.safeParse(malformed).success, false)
 })
 
-void test('a response’s schema is kept, and one that is not an object is read as none', () => {
+void test('a response’s schema is kept, and one that is no schema is read as none', () => {
   const parsed = OpenApiDocumentSchema.parse({
     openapi: '3.1.0',
     paths: {
@@ -87,7 +87,8 @@ void test('a response’s schema is kept, and one that is not an object is read 
             '200': {
               content: {
                 'application/json': { schema: { type: 'array', items: { type: 'string' } } },
-                'text/plain': { schema: true }
+                'text/plain': { schema: ['string'] },
+                'text/csv': { schema: false }
               }
             }
           }
@@ -105,5 +106,6 @@ void test('a response’s schema is kept, and one that is not an object is read 
     items: { type: 'string' }
   })
   assert.equal(content?.['text/plain']?.schema, undefined)
+  assert.equal(content?.['text/csv']?.schema, false)
   assert.deepEqual(parsed.components?.schemas, { Pet: { type: 'object', nullable: true } })
 })

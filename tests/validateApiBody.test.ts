@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
 import { bundleBodySchema } from '../e2e/bundleBodySchema.ts'
-import type { ApiBodyValidation } from '../e2e/fixtures/ApiBodyValidation.ts'
+import type { ApiCheckResult } from '../e2e/fixtures/ApiCheckResult.ts'
 import { validateApiBody } from '../e2e/fixtures/validateApiBody.ts'
 import type { JsonObject } from '../e2e/JsonObject.ts'
 
@@ -51,7 +51,7 @@ const validate = (
   operation: ApiOperation,
   body: unknown,
   answer: { status?: number; contentType?: string } = {}
-): ApiBodyValidation =>
+): ApiCheckResult =>
   validateApiBody({
     operation,
     status: answer.status ?? 200,
@@ -63,7 +63,7 @@ void test('a body the schema allows has no problem', () => {
   const operation = operationWith(PET_REFERENCE())
 
   assert.deepEqual(validate(operation, { id: 7, name: 'Rex', nickname: null, born: 'whenever' }), {
-    kind: 'validated',
+    kind: 'checked',
     problems: []
   })
 })
@@ -72,11 +72,11 @@ void test('each thing the schema does not allow is listed with where it is', () 
   const operation = operationWith({ type: 'array', items: PET_REFERENCE() })
 
   assert.deepEqual(validate(operation, [{ id: 7, name: 'Rex' }, { id: '8' }]), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ["/1 must have required property 'name'", '/1/id must be integer']
   })
   assert.deepEqual(validate(operation, { id: 7 }), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ['the body must be array']
   })
 })
@@ -86,7 +86,7 @@ void test('schemas that point at one another are followed, around a circle too',
   const body = { id: 7, name: 'Rex', owner: { id: 1, pets: [{ id: 7 }] } }
 
   assert.deepEqual(validate(operation, body), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ["/owner/pets/0 must have required property 'name'"]
   })
 })
@@ -95,9 +95,9 @@ void test('an OpenAPI 3.1 schema is read as JSON Schema 2020-12', () => {
   const schema = { type: 'object', properties: { nickname: { type: ['string', 'null'] } } }
   const operation = operationWith(schema, '3.1.0')
 
-  assert.deepEqual(validate(operation, { nickname: null }), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, { nickname: null }), { kind: 'checked', problems: [] })
   assert.deepEqual(validate(operation, { nickname: 7 }), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ['/nickname must be string,null']
   })
 })
@@ -106,7 +106,7 @@ void test('a body that is not JSON, under a JSON content type, is a problem', ()
   const operation = operationWith(PET_REFERENCE())
 
   assert.deepEqual(validate(operation, '<p>Rex</p>'), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ['the body is not valid JSON']
   })
 })
@@ -117,8 +117,8 @@ void test('a long list of problems is cut short, saying how many more there are'
 
   const validation = validate(operation, body)
 
-  assert.equal(validation.kind, 'validated')
-  assert.deepEqual(validation.kind === 'validated' ? validation.problems.slice(-2) : [], [
+  assert.equal(validation.kind, 'checked')
+  assert.deepEqual(validation.kind === 'checked' ? validation.problems.slice(-2) : [], [
     '/9 must be integer',
     '…and 3 more'
   ])
@@ -131,7 +131,7 @@ void test('the schema declared for a range or as the default applies to an answe
     assert.deepEqual(
       validate(operationWith(PET_REFERENCE(), '3.0.3', status), body, { status: 404 }),
       {
-        kind: 'validated',
+        kind: 'checked',
         problems: ["the body must have required property 'name'", '/id must be integer']
       }
     )
@@ -142,11 +142,11 @@ void test('an answer that is not JSON is left unvalidated, saying so', () => {
   const operation = operationWith(PET_REFERENCE())
 
   assert.deepEqual(validate(operation, '<p>Rex</p>', { contentType: 'text/html' }), {
-    kind: 'unvalidated',
+    kind: 'unchecked',
     reason: 'the answer is text/html, not JSON'
   })
   assert.deepEqual(validate(operation, '', { contentType: '' }), {
-    kind: 'unvalidated',
+    kind: 'unchecked',
     reason: 'the answer is of no content type, not JSON'
   })
 })
@@ -155,11 +155,11 @@ void test('an answer the document declares no schema for is left unvalidated, sa
   const operation = operationWith(PET_REFERENCE())
 
   assert.deepEqual(validate(operation, { error: 'gone' }, { status: 404 }), {
-    kind: 'unvalidated',
+    kind: 'unchecked',
     reason: 'the document declares no schema for an HTTP 404 answer as application/json'
   })
   assert.deepEqual(validate(operation, {}, { contentType: 'application/problem+json' }), {
-    kind: 'unvalidated',
+    kind: 'unchecked',
     reason: 'the document declares no schema for an HTTP 200 answer as application/problem+json'
   })
 })
@@ -170,9 +170,9 @@ void test('a schema a validator cannot read leaves the answer unvalidated, with 
   for (const schema of unreadable) {
     const validation = validate(operationWith(schema), 7)
 
-    assert.equal(validation.kind, 'unvalidated')
+    assert.equal(validation.kind, 'unchecked')
     assert.match(
-      validation.kind === 'unvalidated' ? validation.reason : '',
+      validation.kind === 'unchecked' ? validation.reason : '',
       /^the document's schema for this answer cannot be used: /
     )
   }
@@ -187,10 +187,10 @@ void test('an OpenAPI 3.0 exclusive bound is held as one', () => {
     exclusiveMaximum: false
   })
 
-  assert.deepEqual(validate(operation, 5), { kind: 'validated', problems: [] })
-  assert.deepEqual(validate(operation, 9), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, 5), { kind: 'checked', problems: [] })
+  assert.deepEqual(validate(operation, 9), { kind: 'checked', problems: [] })
   assert.deepEqual(validate(operation, 1), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ['the body must be > 1']
   })
 })
@@ -216,9 +216,9 @@ void test('a property only a request carries is not required of an answer', () =
     ]
   }
 
-  assert.deepEqual(validate(operation, { id: 7 }), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, { id: 7 }), { kind: 'checked', problems: [] })
   assert.deepEqual(validate(operation, {}), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ["the body must have required property 'id'"]
   })
 })
@@ -238,11 +238,11 @@ void test('the declared content type that fits the answer most closely gives the
   }
 
   assert.deepEqual(validate(operation, '"seven"'), {
-    kind: 'validated',
+    kind: 'checked',
     problems: ['the body must be integer']
   })
   assert.deepEqual(validate(operation, '"seven"', { contentType: 'application/problem+json' }), {
-    kind: 'validated',
+    kind: 'checked',
     problems: []
   })
 })
@@ -261,7 +261,42 @@ void test('a closer content type that declares no schema is not passed over for 
   }
 
   assert.deepEqual(validate(operation, '"seven"'), {
-    kind: 'unvalidated',
+    kind: 'unchecked',
     reason: 'the document declares no schema for an HTTP 200 answer as application/json'
+  })
+})
+
+void test('a value a schema lists as allowed is never read as a schema itself', () => {
+  const allowed = { minimum: 1, exclusiveMinimum: true }
+  const operation = operationWith({ enum: [allowed], default: allowed, example: allowed })
+
+  assert.deepEqual(validate(operation, allowed), { kind: 'checked', problems: [] })
+})
+
+void test('a pointer into one of the document’s schemas brings that schema with it', () => {
+  const operation = operationWith({ $ref: '#/components/schemas/Pet/properties/id' })
+
+  assert.deepEqual(validate(operation, 'seven'.length), { kind: 'checked', problems: [] })
+  assert.deepEqual(validate(operation, '"seven"'), {
+    kind: 'checked',
+    problems: ['the body must be integer']
+  })
+})
+
+void test('a schema that allows nothing rejects every body', () => {
+  const operation: ApiOperation = {
+    ...operationWith({ type: 'string' }),
+    bodySchemas: [
+      {
+        status: '200',
+        contentType: 'application/json',
+        schema: bundleBodySchema(false, {}, '3.1.0')
+      }
+    ]
+  }
+
+  assert.deepEqual(validate(operation, 7), {
+    kind: 'checked',
+    problems: ['the body boolean schema is false']
   })
 })

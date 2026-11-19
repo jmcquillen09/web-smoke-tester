@@ -11,10 +11,10 @@ import { fetchApiList } from '../e2e/fetchApiList.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
 import type { ApiAnswer } from '../e2e/fixtures/ApiAnswer.ts'
 import { findApiAuthProblems } from '../e2e/fixtures/findApiAuthProblems.ts'
-import { findApiBodyProblems } from '../e2e/fixtures/findApiBodyProblems.ts'
 import { findApiContentTypeProblems } from '../e2e/fixtures/findApiContentTypeProblems.ts'
 import { findApiStatusProblems } from '../e2e/fixtures/findApiStatusProblems.ts'
 import { requestApiOperation } from '../e2e/fixtures/requestApiOperation.ts'
+import { validateApiBody } from '../e2e/fixtures/validateApiBody.ts'
 import { planApiOperationsWithListedValues } from '../e2e/planApiOperationsWithListedValues.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
@@ -24,7 +24,10 @@ import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
 
 // Every API check's judgment, in the order a target lists an operation's expected failures.
 const PROBLEM_FINDERS: Record<ApiCheck, (answer: ApiAnswer) => string[]> = {
-  [ApiCheck.BODY]: findApiBodyProblems,
+  [ApiCheck.BODY]: (answer) => {
+    const result = validateApiBody(answer)
+    return result.kind === 'checked' ? [...result.problems] : []
+  },
   [ApiCheck.CONTENT_TYPE]: findApiContentTypeProblems,
   [ApiCheck.STATUS]: findApiStatusProblems,
   [ApiCheck.AUTH]: findApiAuthProblems

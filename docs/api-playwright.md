@@ -194,11 +194,12 @@ the operations they apply to.
 ## How it is built
 
 - `ApiOperationStage` is the base of every API stage: its `setup` requests the stage's operation
-  with `requestApiOperation` and puts the `ApiAnswer` in the run state, and its `execute` marks an
-  expected failure and fails on any finding. A check stage only names its `check` and writes
-  `findProblems`.
+  with `requestApiOperation` and puts the `ApiAnswer` in the run state, and its `execute` skips an
+  answer the check cannot judge, marks an expected failure and fails on any finding. A check stage
+  only names its `check` and writes `judge`, which returns the findings or the reason there is
+  nothing to judge (`ApiCheckResult`).
 - The judgments are pure functions that return findings as data: `findApiStatusProblems`,
-  `findApiContentTypeProblems`, `findApiBodyProblems`, `findApiAuthProblems` and
+  `findApiContentTypeProblems`, `findApiAuthProblems`, `validateApiBody` and
   `findDeclaredApiResponse` under [`e2e/fixtures/`](../e2e/fixtures), unit-tested in
   [`tests/`](../tests).
 - A response's schema is handed to its test standing alone:

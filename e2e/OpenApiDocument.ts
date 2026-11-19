@@ -28,8 +28,8 @@ const OpenApiResponseSchema = z.object({
   content: z
     .record(
       z.string(),
-      /** The body's schema; one that is not an object (`true`, a list) is read as none. */
-      z.object({ schema: JsonObjectSchema.optional().catch(undefined) })
+      /** The body's schema: an object, or `true` or `false`. Anything else is read as none. */
+      z.object({ schema: z.union([JsonObjectSchema, z.boolean()]).optional().catch(undefined) })
     )
     .optional()
 })
