@@ -6,7 +6,7 @@ import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
 const CERTIFICATE_REASON = /certificate|CERT_/i
 
 // Asks the site for its first page and stops the run, with the reason, when it does not answer at
-// all (a wrong address, a refused certificate). An error status is an answer, which the tests report.
+// all. An error status is an answer, and so is a redirect, which is not followed.
 export const assertSiteAnswers = async (
   settings: Pick<E2eTargetSettings, 'target' | 'baseUrl' | 'paths'>,
   siteRequest: APIRequestContext
@@ -16,6 +16,7 @@ export const assertSiteAnswers = async (
   try {
     const response = await siteRequest.get(startUrl, {
       failOnStatusCode: false,
+      maxRedirects: 0,
       timeout: URL_CHECK_TIMEOUT_MS
     })
     await response.dispose()

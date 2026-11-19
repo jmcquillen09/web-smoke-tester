@@ -6,16 +6,11 @@ import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { withDemoServer } from '../demo/withDemoServer.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 
-// An address nothing listens on: a port the system just handed out and took back.
-const freeBaseUrl = async (): Promise<string> => {
-  const server = await startDemoServer(demoSite, 0, HOST)
-  const { port } = server.address() as AddressInfo
-  await stopDemoServer(demoSite, server)
-  return `http://${HOST}:${String(port)}`
-}
+const freeBaseUrl = async (): Promise<string> => `http://${HOST}:${String(await findFreePort())}`
 
 void test('the demo server answers while the work runs and has shut down once it is done', async () => {
   const baseUrl = await freeBaseUrl()
@@ -83,4 +78,23 @@ void test('a port that is taken starts no work', async () => {
   } finally {
     await stopDemoServer(demoSite, holder)
   }
+})
+
+void test('the demo server is shut down when announcing it fails', async () => {
+  const baseUrl = await freeBaseUrl()
+  const failure = new Error('the output is closed')
+
+  await assert.rejects(
+    withDemoServer(
+      demoSite,
+      baseUrl,
+      () => {
+        throw failure
+      },
+      async () => {}
+    ),
+    failure
+  )
+
+  await assert.rejects(fetch(baseUrl))
 })

@@ -9,6 +9,7 @@ import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { API_OPERATIONS_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runWebPlaywright.ts')
@@ -39,9 +40,7 @@ const listSiteTests = (targetsFile: string): Promise<{ code: number; output: str
   })
 
 void test('a run against a target that serves the demo site starts it, crawls it and shuts it down', async () => {
-  const free = await startDemoServer(demoSite, 0, HOST)
-  const { port } = free.address() as AddressInfo
-  await stopDemoServer(demoSite, free)
+  const port = await findFreePort()
 
   const run = await listSiteTests(targetsFileFor(port))
 

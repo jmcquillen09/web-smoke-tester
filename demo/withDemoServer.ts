@@ -12,8 +12,8 @@ export const withDemoServer = async <T>(
 ): Promise<T> => {
   const { hostname, port } = new URL(baseUrl)
   const server = await startDemoServer(demo, Number(port), hostname)
-  log(`the ${demo.label} is running at ${baseUrl}`)
   try {
+    log(`the ${demo.label} is running at ${baseUrl}`)
     return await work()
   } finally {
     await stopDemoServer(demo, server)

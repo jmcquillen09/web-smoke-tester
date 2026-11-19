@@ -2,17 +2,21 @@ import type { DemoServer } from './DemoServer.ts'
 import { DemoServerError } from './errors/DemoServerError.ts'
 import { startDemoServer } from './startDemoServer.ts'
 
-// The host and port to listen on. A demo server speaks plain http on a port the address names.
-const listenAddressOf = (demo: DemoServer, baseUrl: string): { host: string; port: number } => {
-  const isUrl = URL.canParse(baseUrl)
-  const isServable = isUrl && new URL(baseUrl).protocol === 'http:' && new URL(baseUrl).port !== ''
+// Where to listen. A demo server speaks plain http on a port the address names; the address given
+// is never printed back, since it may carry a password.
+const listenAddressOf = (demo: DemoServer, baseUrl: string): URL => {
+  const address = URL.canParse(baseUrl) ? new URL(baseUrl) : new URL('about:blank')
+  const isServable =
+    address.protocol === 'http:' &&
+    address.port !== '' &&
+    address.username === '' &&
+    address.password === ''
   if (!isServable) {
     throw new DemoServerError(
-      `The ${demo.label} is served at an address like http://localhost:<port>; "${baseUrl}" is not one.`
+      `The ${demo.label} is served at an address like http://localhost:<port>, with no user name or password; the address given is not one.`
     )
   }
-  const { hostname, port } = new URL(baseUrl)
-  return { host: hostname, port: Number(port) }
+  return address
 }
 
 // Serves a demo server at `baseUrl` until the process is stopped, and says where it is. A port it
@@ -23,9 +27,9 @@ export const serveDemoServer = async (
   baseUrl: string
 ): Promise<void> => {
   try {
-    const { host, port } = listenAddressOf(demo, baseUrl)
-    await startDemoServer(demo, port, host)
-    console.log(`${command}: the ${demo.label} is at ${baseUrl}. Ctrl+C stops it.`)
+    const address = listenAddressOf(demo, baseUrl)
+    await startDemoServer(demo, Number(address.port), address.hostname)
+    console.log(`${command}: the ${demo.label} is at ${address.origin}. Ctrl+C stops it.`)
   } catch (error) {
     console.error(`${command}: ${error instanceof Error ? error.message : String(error)}`)
     process.exit(1)

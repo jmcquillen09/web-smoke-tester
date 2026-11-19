@@ -10,17 +10,10 @@ import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runApiPlaywright.ts')
-
-// A port nothing listens on: one the system just handed out and took back.
-const freePort = async (): Promise<number> => {
-  const server = await startDemoServer(demoApi, 0, HOST)
-  const { port } = server.address() as AddressInfo
-  await stopDemoServer(demoApi, server)
-  return port
-}
 
 // Runs the API runner against `targetsFile` and resolves with its exit code and everything it printed.
 const runApiRunner = (
@@ -30,7 +23,7 @@ const runApiRunner = (
   runNodeScript([RUNNER, 'demo', ...args], { [TARGETS_FILE_VARIABLE]: targetsFile })
 
 void test('a run that stops before its tests start still shuts the demo API down', async () => {
-  const port = await freePort()
+  const port = await findFreePort()
   const targetsFile = writeTargetsFile(
     JSON.stringify({
       defaultTarget: 'demo',
@@ -55,7 +48,7 @@ void test('a run that stops before its tests start still shuts the demo API down
 })
 
 void test('an expected failure the run does not request is reported and ignored, and the tests still run', async () => {
-  const port = await freePort()
+  const port = await findFreePort()
   const targetsFile = writeTargetsFile(
     JSON.stringify({
       defaultTarget: 'demo',

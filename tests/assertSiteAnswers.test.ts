@@ -81,3 +81,23 @@ void test('a site nothing serves stops the run without advice about certificates
     )
   })
 })
+
+void test('a redirect is an answer, and where it leads is never requested', async () => {
+  const requested: string[] = []
+  const server = createServer(createSelfSignedCertificate(HOST), (request, response) => {
+    requested.push(request.url ?? '')
+    response.writeHead(302, { location: '/session/logout' }).end()
+  })
+  await new Promise<void>((resolve) => server.listen(0, HOST, resolve))
+  const baseUrl = `https://${HOST}:${String((server.address() as AddressInfo).port)}`
+  try {
+    await withSiteRequest({ ignoreHttpsErrors: true }, (siteRequest) =>
+      assertSiteAnswers(settingsFor(baseUrl), siteRequest)
+    )
+
+    assert.deepEqual(requested, ['/start'])
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})

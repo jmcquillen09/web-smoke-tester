@@ -1,14 +1,10 @@
 import assert from 'node:assert/strict'
 import { mkdtempSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { demoApi } from '../demo/demoApi.ts'
-import { startDemoServer } from '../demo/startDemoServer.ts'
-import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import {
   API_OPERATIONS_VARIABLE,
   API_PROJECT,
@@ -17,14 +13,13 @@ import {
 } from '../e2e/constants.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/cli')
 
 void test('Playwright started without a runner serves the target’s demo server and shuts it down', async () => {
-  const free = await startDemoServer(demoApi, 0, HOST)
-  const baseUrl = `http://${HOST}:${String((free.address() as AddressInfo).port)}`
-  await stopDemoServer(demoApi, free)
+  const baseUrl = `http://${HOST}:${String(await findFreePort())}`
   const scratch = mkdtempSync(path.join(tmpdir(), 'runner-free-run-'))
   const operation = {
     method: 'GET',

@@ -1,15 +1,12 @@
 import assert from 'node:assert/strict'
-import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import test from 'node:test'
 
-import { demoSite } from '../demo/demoSite.ts'
-import { startDemoServer } from '../demo/startDemoServer.ts'
-import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runE2ePlaywright.ts')
@@ -25,9 +22,7 @@ const listTests = (targetsFile: string): Promise<{ code: number; output: string 
   runNodeScript([RUNNER, 'site', '--list'], { [TARGETS_FILE_VARIABLE]: targetsFile })
 
 void test('a run against a site with an OpenAPI document holds its web tests and its API tests', async () => {
-  const free = await startDemoServer(demoSite, 0, HOST)
-  const { port } = free.address() as AddressInfo
-  await stopDemoServer(demoSite, free)
+  const port = await findFreePort()
 
   const run = await listTests(
     targetsFileWith({ baseUrl: `http://${HOST}:${String(port)}`, servesDemoSite: true })
@@ -71,9 +66,7 @@ void test('a site whose document has no operation a run can request still gets i
 })
 
 void test('an expected API failure the run does not request is reported and ignored, and every test still runs', async () => {
-  const free = await startDemoServer(demoSite, 0, HOST)
-  const { port } = free.address() as AddressInfo
-  await stopDemoServer(demoSite, free)
+  const port = await findFreePort()
 
   const run = await listTests(
     targetsFileWith({
@@ -94,9 +87,7 @@ void test('an expected API failure the run does not request is reported and igno
 })
 
 void test('a site that does not answer stops the run before any test is planned', async () => {
-  const free = await startDemoServer(demoSite, 0, HOST)
-  const { port } = free.address() as AddressInfo
-  await stopDemoServer(demoSite, free)
+  const port = await findFreePort()
 
   const run = await listTests(targetsFileWith({ baseUrl: `http://${HOST}:${String(port)}` }))
 

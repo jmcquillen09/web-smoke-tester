@@ -1,21 +1,12 @@
 import assert from 'node:assert/strict'
-import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
-import { demoSite } from '../demo/demoSite.ts'
-import { startDemoServer } from '../demo/startDemoServer.ts'
-import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { withTargetDemoServer } from '../demo/withTargetDemoServer.ts'
+import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
 
-// An address nothing listens on: a port the system just handed out and took back.
-const freeBaseUrl = async (): Promise<string> => {
-  const server = await startDemoServer(demoSite, 0, HOST)
-  const { port } = server.address() as AddressInfo
-  await stopDemoServer(demoSite, server)
-  return `http://${HOST}:${String(port)}`
-}
+const freeBaseUrl = async (): Promise<string> => `http://${HOST}:${String(await findFreePort())}`
 
 // What the address answers `path` with while the target's demo server, if it names one, is served.
 const statusDuringRun = async (
