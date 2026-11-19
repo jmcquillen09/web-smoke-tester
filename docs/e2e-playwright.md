@@ -24,9 +24,7 @@ Three commands run the tests, each against a target:
 
 `test:e2e-playwright` looks for the site's OpenAPI document as an API run does. A site that
 publishes none, or one with no operation a run can request, is told so in the same words, and the
-run goes on with the web tests alone: a missing document does not fail it. An `expectedApiFailures`
-entry that names an operation the run does not request is reported the same way, and the API tests
-are left out of that run.
+run goes on with the web tests alone: a missing document does not fail it.
 
 Arguments after the target pass straight to `playwright test`, for example
 `npm run test:e2e-playwright -- staging e2e/brokenLinks.spec.ts --headed` or

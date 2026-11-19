@@ -6,8 +6,7 @@ needs no access to the API's code and only ever reads: no other method is reques
 are sent, and no request body is built.
 
 `npm run test:e2e-playwright [target]` runs these same API tests together with the web tests. There
-a site with no document to test, or an expected failure the run does not request, is told so and
-gets its web tests alone; here either fails the run.
+a site with no document to test is told so and gets its web tests alone; here it fails the run.
 
 It shares the site suite's targets, stages, runners and reports; read
 [`e2e-playwright.md`](e2e-playwright.md) for those. This page covers what is particular to the API
@@ -25,8 +24,7 @@ Arguments after the target pass to `playwright test`, as in the site suite:
 `npm run test:api-playwright -- staging -g "/books"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
 site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site
-does not answer (a certificate the run does not accept is named as that), it offers no document, the document has no operation a run can request, or an expected failure names an
-operation the run does not request; `2` the run was refused before it started.
+does not answer (a certificate the run does not accept is named as that), it offers no document, or the document has no operation a run can request; `2` the run was refused before it started.
 
 Only test APIs you own or have permission to test.
 
@@ -101,9 +99,9 @@ Each named test is marked with Playwright's
 
 The test is marked once the operation has answered (`ApiOperationStage.execute`), so only the
 check's own finding is expected: an operation that never answers still fails the run. An entry
-whose path the run does not request (a misspelled path, an operation the document dropped) stops
-the run before any test starts
-([`e2e/assertExpectedApiFailuresPlanned.ts`](../e2e/assertExpectedApiFailuresPlanned.ts)).
+whose path the run does not request (a misspelled path, an operation the document dropped) is
+reported before the tests start and then ignored, and every test still runs
+([`e2e/findUnrequestedExpectedApiFailures.ts`](../e2e/findUnrequestedExpectedApiFailures.ts)).
 
 ## Finding the document
 

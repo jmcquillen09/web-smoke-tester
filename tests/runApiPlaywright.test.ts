@@ -22,9 +22,12 @@ const freePort = async (): Promise<number> => {
 }
 
 // Runs the API runner against `targetsFile` and resolves with its exit code and everything it printed.
-const runApiRunner = (targetsFile: string): Promise<{ code: number; output: string }> =>
+const runApiRunner = (
+  targetsFile: string,
+  args: readonly string[] = []
+): Promise<{ code: number; output: string }> =>
   new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [RUNNER, 'demo'], {
+    const child = spawn(process.execPath, [RUNNER, 'demo', ...args], {
       env: { ...process.env, [TARGETS_FILE_VARIABLE]: targetsFile }
     })
     let output = ''
@@ -45,7 +48,7 @@ void test('a run that stops before its tests start still shuts the demo API down
         demo: {
           baseUrl: `http://${HOST}:${String(port)}`,
           servesDemoApi: true,
-          expectedApiFailures: [{ path: '/no-such-operation', check: 'status' }]
+          apiSpecPath: '/no-such-document.json'
         }
       }
     })
@@ -55,10 +58,35 @@ void test('a run that stops before its tests start still shuts the demo API down
 
   assert.equal(run.code, 1)
   assert.match(run.output, /the demo API is running at/)
-  assert.match(run.output, /expects a failure on GET \/no-such-operation/)
+  assert.match(run.output, /The demo target has no OpenAPI 3 JSON document at/)
   assert.match(run.output, /the demo API has shut down/)
   const next = await startDemoServer(demoApi, port, HOST)
   await stopDemoServer(demoApi, next)
+})
+
+void test('an expected failure the run does not request is reported and ignored, and the tests still run', async () => {
+  const port = await freePort()
+  const targetsFile = writeTargetsFile(
+    JSON.stringify({
+      defaultTarget: 'demo',
+      targets: {
+        demo: {
+          baseUrl: `http://${HOST}:${String(port)}`,
+          servesDemoApi: true,
+          expectedApiFailures: [{ path: '/no-such-operation', check: 'status' }]
+        }
+      }
+    })
+  )
+
+  const run = await runApiRunner(targetsFile, ['--list'])
+
+  assert.equal(run.code, 0, run.output)
+  assert.match(
+    run.output,
+    /ignoring the expected failure on GET \/no-such-operation: the demo target names it in expectedApiFailures, but this run does not request it/
+  )
+  assert.match(run.output, /\[api\] › /)
 })
 
 void test('a run whose port is taken stops with the reason and leaves the port’s holder running', async () => {
