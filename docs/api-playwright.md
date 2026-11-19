@@ -12,7 +12,6 @@ run.
 ## Running it
 
 ```bash
-npx playwright install chromium         # once per machine
 npm run test:api-playwright             # the defaultTarget in targets.json
 npm run test:api-playwright staging     # the target named "staging"
 ```
@@ -93,7 +92,8 @@ Each named test is marked with Playwright's
   taken off the list rather than left there;
 - **every other test is unaffected**, so a new finding still fails the run.
 
-An expected failure fails for any reason, including an operation that never answers. An entry
+The test is marked once the operation has answered (`ApiOperationStage.execute`), so only the
+check's own finding is expected: an operation that never answers still fails the run. An entry
 whose path the run does not request (a misspelled path, an operation the document dropped) stops
 the run before any test starts
 ([`e2e/assertExpectedApiFailuresPlanned.ts`](../e2e/assertExpectedApiFailuresPlanned.ts)).
@@ -160,14 +160,20 @@ run in the `api` Playwright project.
 ## How it is built
 
 - `ApiOperationStage` is the base of every API stage: its `setup` requests the stage's operation
-  with `requestApiOperation` and puts the `ApiAnswer` in the run state, so each check stage only
-  writes `execute` and reads it with `state.requireApiAnswer()`.
+  with `requestApiOperation` and puts the `ApiAnswer` in the run state, and its `execute` marks an
+  expected failure and fails on any finding. A check stage only names its `check` and writes
+  `findProblems`.
 - The judgments are pure functions that return findings as data: `findApiStatusProblems`,
   `findApiContentTypeProblems` and `findDeclaredApiResponse` under
   [`e2e/fixtures/`](../e2e/fixtures), unit-tested in [`tests/`](../tests).
-- The API specs use the suite's shared `test`, which opens a browser page for every test, so an API
-  run needs Chromium installed although its requests never go through the page.
+- The API specs use `apiTest` ([`e2e/fixtures/apiTest.ts`](../e2e/fixtures/apiTest.ts)), whose
+  `stageRuntime` holds only `request` and `targetSettings` (`ApiStageRuntime`). It opens no page,
+  so an API run needs no browser installed.
+- The runner's own requests (finding the document) go through
+  [`e2e/withSiteRequest.ts`](../e2e/withSiteRequest.ts), which honours the target's
+  `ignoreHttpsErrors` as the tests' requests do.
 
 To add an API check: write the fixture that judges an `ApiAnswer` and returns findings, create
-`e2e/stages/<Name>Stage.ts` extending `ApiOperationStage`, run it from an isolated spec under
-`e2e/api/` that loops over `activeApiOperations()`, and add its row to the table above.
+`e2e/stages/<Name>Stage.ts` extending `ApiOperationStage`, add the check's name to
+[`e2e/ApiCheck.ts`](../e2e/ApiCheck.ts), run the stage from an isolated spec under `e2e/api/` that
+loops over `activeApiOperations()` with `apiTest`, and add its row to the table above.

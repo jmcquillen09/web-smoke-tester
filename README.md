@@ -72,7 +72,8 @@ document is found and which operations a run requests.
   alone.
 - The HTML report lands in `playwright-report/` (`npx playwright show-report`), failure traces and
   screenshots in `test-results/`.
-- `npm run test:api-playwright [target]` runs the API checks against that target. To try them on
+- `npm run test:api-playwright [target]` runs the API checks against that target; it needs no
+  browser installed. To try them on
   the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
   the tests and shuts the demo API down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
