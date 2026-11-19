@@ -34,6 +34,7 @@ const API_KEY_SCHEME = 'apiKey'
 const planned = <T>(value: T): Planned<T> => ({ kind: 'planned', value })
 const skipped = (reason: string): SkippedValue => ({ kind: 'skipped', reason })
 const isPlanned = <T>(plan: Planned<T>): plan is PlannedValue<T> => plan.kind === 'planned'
+const isReference = (entry: object): entry is { readonly $ref: string } => '$ref' in entry
 
 // The component a `$ref` names, or undefined when it points anywhere but that components section.
 const resolveComponent = <T>(
@@ -68,10 +69,9 @@ const planParameters = (
 ): Planned<readonly OpenApiParameter[]> => {
   const parameters = new Map<string, OpenApiParameter>()
   for (const entry of [...(item.parameters ?? []), ...(operation.parameters ?? [])]) {
-    const parameter =
-      '$ref' in entry
-        ? resolveComponent(entry.$ref, PARAMETER_REFERENCE, document.components?.parameters)
-        : entry
+    const parameter = isReference(entry)
+      ? resolveComponent(entry.$ref, PARAMETER_REFERENCE, document.components?.parameters)
+      : entry
     const isResolved = parameter !== undefined
     if (!isResolved) return skipped("it has a parameter $ref outside the document's components")
     parameters.set(`${parameter.in}:${parameter.name}`, parameter)
@@ -144,10 +144,9 @@ const planResponses = (
 ): Planned<ApiOperation['responses']> => {
   const responses: ApiOperation['responses'] = []
   for (const [status, entry] of Object.entries(operation.responses ?? {})) {
-    const response: OpenApiResponse | undefined =
-      '$ref' in entry
-        ? resolveComponent(entry.$ref, RESPONSE_REFERENCE, document.components?.responses)
-        : entry
+    const response: OpenApiResponse | undefined = isReference(entry)
+      ? resolveComponent(entry.$ref, RESPONSE_REFERENCE, document.components?.responses)
+      : entry
     const isResolved = response !== undefined
     if (!isResolved) return skipped("it has a response $ref outside the document's components")
     responses.push({ status, contentTypes: Object.keys(response.content ?? {}) })

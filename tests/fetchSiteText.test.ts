@@ -52,7 +52,10 @@ void test('an OK answer of a wanted content type is read', async () => {
     async (origin) => {
       const isHtml = (contentType: string): boolean => contentType.includes('text/html')
 
-      assert.equal(await fetchSiteText(`${origin}/page`, 'text/html', isHtml), 'hello')
+      assert.deepEqual(await fetchSiteText(`${origin}/page`, 'text/html', isHtml), {
+        url: `${origin}/page`,
+        text: 'hello'
+      })
     }
   )
 })
@@ -69,11 +72,14 @@ void test('an error status and an unwanted content type are no text', async () =
   )
 })
 
-void test('a redirect on the same site is followed to its answer', async () => {
+void test('a redirect on the same site is followed to the address that answers', async () => {
   await withSite(
     () => ({ '/old': redirectTo('/new'), '/new': textOf('moved here') }),
     async (origin) => {
-      assert.equal(await fetchSiteText(`${origin}/old`, 'text/plain', anyType), 'moved here')
+      assert.deepEqual(await fetchSiteText(`${origin}/old`, 'text/plain', anyType), {
+        url: `${origin}/new`,
+        text: 'moved here'
+      })
     }
   )
 })

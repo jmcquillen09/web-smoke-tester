@@ -258,13 +258,25 @@ void test('a path that names another site is never requested', () => {
     operations: [],
     skipped: [
       { path: '//other.example/data', reason: 'its path does not start with one "/"' },
-      {
-        path: '/\\other.example/data',
-        reason: 'its address https://other.example/data is on another site than its server'
-      },
+      { path: '/\\other.example/data', reason: 'its path does not start with one "/"' },
       { path: 'pets', reason: 'its path does not start with one "/"' }
     ]
   })
+})
+
+void test('a path parameter cannot move a request to another site', () => {
+  const document = documentWith({
+    '/{host}/data': {
+      get: {
+        parameters: [{ name: 'host', in: 'path', required: true, example: '/other.example' }],
+        responses: OK_JSON
+      }
+    }
+  })
+
+  const [operation] = planApiOperations(document, DOCUMENT_URL).operations
+
+  assert.equal(operation?.url, 'https://api.example/%2Fother.example/data')
 })
 
 void test('an address that example values or the server make unsafe is never requested', () => {

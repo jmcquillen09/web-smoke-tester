@@ -6,13 +6,13 @@ import {
   UNSAFE_LINK
 } from './constants.ts'
 
-// The body `url` answers with when the answer is OK and of a content type `isWantedType` accepts.
-// A redirect is followed only on the same site and never to an address `UNSAFE_LINK` matches.
+// The body `url` answers with, and the address that answered, when the answer is OK and of a wanted
+// content type. A redirect is followed only on the same site, never to an `UNSAFE_LINK` address.
 export const fetchSiteText = async (
   url: string,
   accept: string,
   isWantedType: (contentType: string) => boolean
-): Promise<string | undefined> => {
+): Promise<{ readonly url: string; readonly text: string } | undefined> => {
   const signal = AbortSignal.timeout(CRAWL_FETCH_TIMEOUT_MS)
   const { origin } = new URL(url)
   let address = url
@@ -26,7 +26,7 @@ export const fetchSiteText = async (
         location !== ''
       if (!isRedirect) {
         const isWanted = response.ok && isWantedType(response.headers.get('content-type') ?? '')
-        if (isWanted) return await response.text()
+        if (isWanted) return { url: address, text: await response.text() }
         await response.body?.cancel()
         return undefined
       }

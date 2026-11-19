@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
+import {
+  type DiscoveredOpenApiDocument,
+  discoverOpenApiDocument
+} from '../e2e/discoverOpenApiDocument.ts'
 import type { OpenApiDocument } from '../e2e/OpenApiDocument.ts'
 
 const DOCUMENT: OpenApiDocument = { openapi: '3.1.0', paths: {} }
@@ -11,10 +14,13 @@ const SETTINGS = {
   apiSpecPaths: ['/openapi.json', '/v3/api-docs']
 }
 
-// A site as a map from address to document; an address it lacks has none. Records each one asked.
-const siteOf = (documents: Record<string, OpenApiDocument>) => {
+// A site as a map from address to the document it leads to; an address it lacks has none. Records
+// each one asked.
+const siteOf = (documents: Record<string, DiscoveredOpenApiDocument>) => {
   const asked: string[] = []
-  const fetchOpenApiDocument = async (url: string): Promise<OpenApiDocument | undefined> => {
+  const fetchOpenApiDocument = async (
+    url: string
+  ): Promise<DiscoveredOpenApiDocument | undefined> => {
     asked.push(url)
     return documents[url]
   }
@@ -22,7 +28,12 @@ const siteOf = (documents: Record<string, OpenApiDocument>) => {
 }
 
 void test('the first address that answers with a document is the site’s document', async () => {
-  const site = siteOf({ 'https://staging.example.com/v3/api-docs': DOCUMENT })
+  const site = siteOf({
+    'https://staging.example.com/v3/api-docs': {
+      url: 'https://staging.example.com/v3/api-docs',
+      document: DOCUMENT
+    }
+  })
 
   const discovered = await discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument)
 
@@ -32,8 +43,26 @@ void test('the first address that answers with a document is the site’s docume
   })
 })
 
+void test('a document found after a redirect is the one at the address that answered', async () => {
+  const site = siteOf({
+    'https://staging.example.com/openapi.json': {
+      url: 'https://staging.example.com/docs/openapi.json',
+      document: DOCUMENT
+    }
+  })
+
+  const discovered = await discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument)
+
+  assert.equal(discovered.url, 'https://staging.example.com/docs/openapi.json')
+})
+
 void test('discovery stops asking once it has found a document', async () => {
-  const site = siteOf({ 'https://staging.example.com/openapi.json': DOCUMENT })
+  const site = siteOf({
+    'https://staging.example.com/openapi.json': {
+      url: 'https://staging.example.com/openapi.json',
+      document: DOCUMENT
+    }
+  })
 
   await discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument)
 
