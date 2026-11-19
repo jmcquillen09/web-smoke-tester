@@ -8,24 +8,31 @@ import { findDeclaredApiResponse } from './findDeclaredApiResponse.ts'
 import { isDeclaredContentType } from './isDeclaredContentType.ts'
 
 const JSON_CONTENT_TYPE = /^application\/(?:.+\+)?json$/
+const WILDCARD = /\*/g
 // OpenAPI schemas carry keywords JSON Schema does not know (`example`, `xml`), and name formats
 // this check does not judge.
 const VALIDATOR_OPTIONS = { strict: false, validateFormats: false, allErrors: true }
 
 const unvalidated = (reason: string): ApiBodyValidation => ({ kind: 'unvalidated', reason })
 
-// The schema the document declares for the answered status and content type; undefined when it
-// declares none.
+const wildcardCountOf = (contentType: string): number => (contentType.match(WILDCARD) ?? []).length
+
+// The schema of the declared content type that fits the answer most closely (`application/json`
+// before `application/*` before `*/*`); undefined when that content type declares none.
 const findBodySchema = (answer: ApiAnswer): JsonObject | undefined => {
-  const status = findDeclaredApiResponse(answer.operation, answer.status)?.status ?? ''
+  const response = findDeclaredApiResponse(answer.operation, answer.status)
+  const [closest = ''] = (response?.contentTypes ?? [])
+    .filter((declared) => isDeclaredContentType(answer.contentType, declared))
+    .sort((one, other) => wildcardCountOf(one) - wildcardCountOf(other))
   return answer.operation.bodySchemas.find(
-    (declared) =>
-      declared.status === status && isDeclaredContentType(answer.contentType, declared.contentType)
+    (declared) => declared.status === response?.status && declared.contentType === closest
   )?.schema
 }
 
-const describe = (error: ErrorObject): string =>
-  `${error.instancePath === '' ? 'the body' : error.instancePath} ${error.message ?? 'is not allowed'}`
+const describe = (error: ErrorObject): string => {
+  const isBodyRoot = error.instancePath === ''
+  return `${isBodyRoot ? 'the body' : error.instancePath} ${error.message ?? 'is not allowed'}`
+}
 
 // Holds an answer's JSON body against the schema the document declares for the answered status and
 // content type. An answer that is not JSON, or has no usable schema declared, is left unvalidated.
@@ -62,8 +69,9 @@ export const validateApiBody = (answer: ApiAnswer): ApiBodyValidation => {
   const problems = (validate.errors ?? []).map(describe)
   const listed = problems.slice(0, MAX_LISTED_FINDINGS)
   const unlisted = problems.length - listed.length
+  const hasUnlistedProblems = unlisted > 0
   return {
     kind: 'validated',
-    problems: unlisted > 0 ? [...listed, `…and ${String(unlisted)} more`] : listed
+    problems: hasUnlistedProblems ? [...listed, `…and ${String(unlisted)} more`] : listed
   }
 }

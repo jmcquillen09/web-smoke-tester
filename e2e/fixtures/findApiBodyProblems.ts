@@ -5,5 +5,6 @@ import { validateApiBody } from './validateApiBody.ts'
 // schema to hold against has no finding here: the body check skips it.
 export const findApiBodyProblems = (answer: ApiAnswer): string[] => {
   const validation = validateApiBody(answer)
-  return validation.kind === 'validated' ? [...validation.problems] : []
+  const isValidated = validation.kind === 'validated'
+  return isValidated ? [...validation.problems] : []
 }

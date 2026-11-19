@@ -165,10 +165,7 @@ void test('an answer the document declares no schema for is left unvalidated, sa
 })
 
 void test('a schema a validator cannot read leaves the answer unvalidated, with the reason', () => {
-  const unreadable = [
-    { type: 'number', minimum: 1, exclusiveMinimum: true },
-    { $ref: '#/components/schemas/Gone' }
-  ]
+  const unreadable = [{ type: 'no such type' }, { $ref: '#/components/schemas/Gone' }]
 
   for (const schema of unreadable) {
     const validation = validate(operationWith(schema), 7)
@@ -179,4 +176,92 @@ void test('a schema a validator cannot read leaves the answer unvalidated, with 
       /^the document's schema for this answer cannot be used: /
     )
   }
+})
+
+void test('an OpenAPI 3.0 exclusive bound is held as one', () => {
+  const operation = operationWith({
+    type: 'number',
+    minimum: 1,
+    exclusiveMinimum: true,
+    maximum: 9,
+    exclusiveMaximum: false
+  })
+
+  assert.deepEqual(validate(operation, 5), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, 9), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, 1), {
+    kind: 'validated',
+    problems: ['the body must be > 1']
+  })
+})
+
+void test('a property only a request carries is not required of an answer', () => {
+  const account = {
+    type: 'object',
+    required: ['id', 'password', 'pin'],
+    properties: {
+      id: { type: 'integer' },
+      password: { type: 'string', writeOnly: true },
+      pin: { $ref: '#/components/schemas/Secret' }
+    }
+  }
+  const operation: ApiOperation = {
+    ...operationWith({ type: 'string' }),
+    bodySchemas: [
+      {
+        status: '200',
+        contentType: 'application/json',
+        schema: bundleBodySchema(account, { Secret: { type: 'string', writeOnly: true } }, '3.0.3')
+      }
+    ]
+  }
+
+  assert.deepEqual(validate(operation, { id: 7 }), { kind: 'validated', problems: [] })
+  assert.deepEqual(validate(operation, {}), {
+    kind: 'validated',
+    problems: ["the body must have required property 'id'"]
+  })
+})
+
+void test('the declared content type that fits the answer most closely gives the schema', () => {
+  const schemaOf = (type: string) => bundleBodySchema({ type }, {}, '3.0.3')
+  const operation: ApiOperation = {
+    ...operationWith({ type: 'string' }),
+    responses: [
+      { status: '200', contentTypes: ['*/*', 'application/*', 'application/json', 'text/csv'] }
+    ],
+    bodySchemas: [
+      { status: '200', contentType: '*/*', schema: schemaOf('boolean') },
+      { status: '200', contentType: 'application/*', schema: schemaOf('string') },
+      { status: '200', contentType: 'application/json', schema: schemaOf('integer') }
+    ]
+  }
+
+  assert.deepEqual(validate(operation, '"seven"'), {
+    kind: 'validated',
+    problems: ['the body must be integer']
+  })
+  assert.deepEqual(validate(operation, '"seven"', { contentType: 'application/problem+json' }), {
+    kind: 'validated',
+    problems: []
+  })
+})
+
+void test('a closer content type that declares no schema is not passed over for a wider one', () => {
+  const operation: ApiOperation = {
+    ...operationWith({ type: 'string' }),
+    responses: [{ status: '200', contentTypes: ['application/*', 'application/json'] }],
+    bodySchemas: [
+      {
+        status: '200',
+        contentType: 'application/*',
+        schema: bundleBodySchema({ type: 'integer' }, {}, '3.0.3')
+      }
+    ]
+  }
+
+  assert.deepEqual(validate(operation, '"seven"'), {
+    kind: 'unvalidated',
+    reason: 'the document declares no schema for an HTTP 200 answer as application/json'
+  })
 })

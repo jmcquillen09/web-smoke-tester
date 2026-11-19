@@ -1,8 +1,10 @@
+import { z } from 'zod'
 import type { ApiOperation } from './ApiOperation.ts'
 import { bundleBodySchema } from './bundleBodySchema.ts'
 import { API_OPERATION_LIMIT, UNSAFE_LINK } from './constants.ts'
 import { isSafeAddress } from './isSafeAddress.ts'
 import { isSitePath } from './isSitePath.ts'
+import { type JsonObject, JsonObjectSchema } from './JsonObject.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
 
 export interface ApiOperationPlan {
@@ -211,6 +213,16 @@ const planUrl = (
   return planned(url.href)
 }
 
+// The document's schemas a response can point at: an object, or `true` or `false`. Anything else
+// under a schema's name is left out, so one malformed entry does not cost the others.
+const usableSchemasOf = (document: OpenApiDocument): Record<string, JsonObject | boolean> =>
+  Object.fromEntries(
+    Object.entries(document.components?.schemas ?? {}).flatMap(([name, schema]) => {
+      const usable = z.union([JsonObjectSchema, z.boolean()]).safeParse(schema)
+      return usable.success ? [[name, usable.data]] : []
+    })
+  )
+
 const planResponses = (
   document: OpenApiDocument,
   operation: OpenApiOperation
@@ -236,7 +248,7 @@ const planResponses = (
       bodySchemas.push({
         status,
         contentType,
-        schema: bundleBodySchema(schema, document.components?.schemas ?? {}, document.openapi)
+        schema: bundleBodySchema(schema, usableSchemasOf(document), document.openapi)
       })
     }
   }

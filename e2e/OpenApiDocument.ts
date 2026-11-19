@@ -72,7 +72,7 @@ export const OpenApiDocumentSchema = z.object({
         .record(z.string(), z.union([OpenApiReferenceSchema, OpenApiResponseSchema]))
         .optional(),
       /** The schemas the document's responses point at with `$ref`. */
-      schemas: z.record(z.string(), JsonObjectSchema).optional().catch(undefined),
+      schemas: z.record(z.string(), z.json()).optional().catch(undefined),
       /** How a request proves who sends it; an `apiKey` scheme names the parameter carrying the key. */
       securitySchemes: z
         .record(

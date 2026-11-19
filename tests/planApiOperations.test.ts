@@ -489,3 +489,37 @@ void test('a response’s schema is handed on, standing alone, for each content 
     }
   ])
 })
+
+void test('a schema entry that is no schema does not cost a response the document’s other schemas', () => {
+  const document = documentWith(
+    {
+      '/pets': {
+        get: {
+          responses: {
+            '200': {
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } }
+            }
+          }
+        }
+      }
+    },
+    {
+      components: {
+        schemas: {
+          Pet: { type: 'object', properties: { tag: { $ref: '#/components/schemas/Any' } } },
+          Any: true,
+          Broken: 'not a schema'
+        }
+      }
+    }
+  )
+
+  const [operation] = planApiOperations(document, DOCUMENT_URL).operations
+
+  assert.deepEqual(operation?.bodySchemas[0]?.schema['components'], {
+    schemas: {
+      Pet: { type: 'object', properties: { tag: { $ref: '#/components/schemas/Any' } } },
+      Any: true
+    }
+  })
+})

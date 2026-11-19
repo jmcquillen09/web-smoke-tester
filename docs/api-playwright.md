@@ -180,7 +180,10 @@ the operations they apply to.
   ([`e2e/fixtures/validateApiBody.ts`](../e2e/fixtures/validateApiBody.ts)). An OpenAPI 3.0 schema
   is read as JSON Schema draft-07 with `nullable`, a 3.1 schema as JSON Schema 2020-12, and a
   `$ref` to the document's `components/schemas` is followed, around a circle too. `format` is not
-  judged, and keywords JSON Schema does not know (`example`, `xml`) are passed over.
+  judged, and keywords JSON Schema does not know (`example`, `xml`) are passed over. An OpenAPI 3.0
+  exclusive bound is held as one, a `writeOnly` property is not required of an answer, and of the
+  declared content types that fit an answer the closest gives the schema (`application/json`
+  before `application/*`).
 - **A body with nothing to hold it against is skipped, not passed**, and the report says why: the
   answer is not JSON, the document declares no schema for that status and content type, or a
   validator cannot read the schema it declares.
