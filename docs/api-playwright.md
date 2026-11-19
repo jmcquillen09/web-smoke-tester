@@ -147,7 +147,8 @@ same site and never to an address `UNSAFE_LINK` matches
 - **`$ref` is followed for parameters and responses** to a definition under the document's
   `components`; one that points anywhere else, or at another `$ref`, skips the operation.
 
-The runner hands the planned operations to Playwright as `E2E_API_OPERATIONS`. A run started
+The runner writes the planned operations to a file and names it to Playwright in
+`E2E_API_OPERATIONS_FILE`. A run started
 without the runner has none, so the API specs write no tests.
 
 ## What each check does

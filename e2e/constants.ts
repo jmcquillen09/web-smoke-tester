@@ -29,9 +29,9 @@ export const TARGETS_FILE_VARIABLE = 'E2E_TARGETS_FILE'
 export const TARGET_VARIABLE = 'E2E_TARGET'
 export const BROWSER_VARIABLE = 'E2E_BROWSER'
 export const SITE_PAGES_VARIABLE = 'E2E_SITE_PAGES'
-// How the API runner hands Playwright the operations it planned from the site's OpenAPI document (a
-// JSON array), and the project that holds the API specs.
-export const API_OPERATIONS_VARIABLE = 'E2E_API_OPERATIONS'
+// Names the file the runner wrote the operations it planned from the site's OpenAPI document into
+// (a JSON array), and the project that holds the API specs.
+export const API_OPERATIONS_FILE_VARIABLE = 'E2E_API_OPERATIONS_FILE'
 export const API_PROJECT = 'api'
 
 // Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`.

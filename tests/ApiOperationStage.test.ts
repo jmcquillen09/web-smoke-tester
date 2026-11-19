@@ -11,11 +11,12 @@ import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
 import {
-  API_OPERATIONS_VARIABLE,
+  API_OPERATIONS_FILE_VARIABLE,
   API_PROJECT,
   TARGET_VARIABLE,
   TARGETS_FILE_VARIABLE
 } from '../e2e/constants.ts'
+import { writeApiOperationsFile } from '../e2e/writeApiOperationsFile.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
@@ -56,7 +57,7 @@ const runStatusSpec = async (
         PLAYWRIGHT_BROWSERS_PATH: path.join(scratch, 'no-browsers'),
         [TARGETS_FILE_VARIABLE]: targetsFile,
         [TARGET_VARIABLE]: 'site',
-        [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
+        [API_OPERATIONS_FILE_VARIABLE]: writeApiOperationsFile(scratch, [operation])
       }
     )
   } finally {

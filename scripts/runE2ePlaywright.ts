@@ -3,7 +3,7 @@
 // the API tests in one `playwright test`. A site with no OpenAPI document gets the web tests alone.
 
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
-import { API_OPERATIONS_VARIABLE, BROWSER_VARIABLE, SITE_PAGES_VARIABLE } from '../e2e/constants.ts'
+import { BROWSER_VARIABLE, SITE_PAGES_VARIABLE } from '../e2e/constants.ts'
 import { E2eApiDocumentError } from '../e2e/errors/E2eApiDocumentError.ts'
 import { planApiRun } from '../e2e/planApiRun.ts'
 import { planWebRun } from '../e2e/planWebRun.ts'
@@ -32,9 +32,9 @@ await runPlaywrightForTarget(COMMAND, settings, playwrightArgs, async (siteReque
   return {
     env: {
       [BROWSER_VARIABLE]: browser,
-      [SITE_PAGES_VARIABLE]: JSON.stringify(pages),
-      [API_OPERATIONS_VARIABLE]: JSON.stringify(operations)
+      [SITE_PAGES_VARIABLE]: JSON.stringify(pages)
     },
+    apiOperations: operations,
     args: []
   }
 })
