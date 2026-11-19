@@ -12,15 +12,16 @@ run.
 ## Running it
 
 ```bash
-npm run test:api-playwright             # the defaultTarget in targets.json
+npm run test:api-playwright demo-api    # the bundled demo API
 npm run test:api-playwright staging     # the target named "staging"
 ```
 
 Arguments after the target pass to `playwright test`, as in the site suite:
 `npm run test:api-playwright -- staging -g "/books"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
-site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site offers no
-document, the document has no operation a run can request, or an expected failure names an
+site suite's do. A run without a target name uses the `defaultTarget`, the demo site, which
+publishes no document. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site
+does not answer (a certificate the run does not accept is named as that), it offers no document, the document has no operation a run can request, or an expected failure names an
 operation the run does not request; `2` the run was refused before it started.
 
 Only test APIs you own or have permission to test.
@@ -40,11 +41,11 @@ The `demo-api` target sets `servesDemoApi`, so the one command does the whole ru
 ([`scripts/runApiPlaywright.ts`](../scripts/runApiPlaywright.ts)):
 
 1. It starts the demo API at the target's address and waits until it is listening
-   ([`demo/startDemoApiServer.ts`](../demo/startDemoApiServer.ts)).
+   ([`demo/startDemoServer.ts`](../demo/startDemoServer.ts)).
 2. It finds the document, plans the operations and runs the tests.
 3. It stops the demo API, whether the tests passed, failed or never started, and waits until the
    API no longer listens and every connection to it has ended
-   ([`demo/stopDemoApiServer.ts`](../demo/stopDemoApiServer.ts)). Only then does the command exit.
+   ([`demo/stopDemoServer.ts`](../demo/stopDemoServer.ts)). Only then does the command exit.
 
 The run prints `the demo API is running at …` and `the demo API has shut down` around the tests.
 A port something else holds stops the run with the reason before any test starts.
