@@ -14,6 +14,7 @@ const operationAt = (url: string): ApiOperation => ({
   path: '/old',
   url,
   secured: false,
+  bodySchemas: [],
   responses: []
 })
 
@@ -31,7 +32,7 @@ void test('a redirecting operation is answered by the redirect, and its destinat
 
     const answer = await requestApiOperation(context, operation)
 
-    assert.deepEqual(answer, { operation, status: 302, contentType: '' })
+    assert.deepEqual(answer, { operation, status: 302, contentType: '', body: '' })
     assert.deepEqual(requested, ['/old'])
   } finally {
     await context.dispose()

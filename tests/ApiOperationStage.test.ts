@@ -41,6 +41,7 @@ const runStatusSpec = async (
     method: 'GET',
     path: '/stats',
     secured: false,
+    bodySchemas: [],
     ...operationOf(baseUrl)
   }
   try {

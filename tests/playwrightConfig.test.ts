@@ -28,6 +28,7 @@ void test('Playwright started without a runner serves the target’s demo server
     path: '/books',
     url: `${baseUrl}/api/books`,
     secured: false,
+    bodySchemas: [],
     responses: [{ status: '200', contentTypes: ['application/json'] }]
   }
 

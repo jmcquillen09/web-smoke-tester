@@ -39,6 +39,7 @@ const listSiteTests = (targetsFile: string): Promise<{ code: number; output: str
           path: '/books',
           url: 'http://localhost/api/books',
           secured: false,
+          bodySchemas: [],
           responses: []
         }
       ]

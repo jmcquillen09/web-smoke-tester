@@ -9,6 +9,7 @@ const operationWith = (responses: ApiOperation['responses']): ApiOperation => ({
   path: '/pets',
   url: 'https://api.example/pets',
   secured: false,
+  bodySchemas: [],
   responses
 })
 
@@ -23,7 +24,8 @@ void test('a content type the document declares for the answered status has no p
     findApiContentTypeProblems({
       operation: OPERATION,
       status: 200,
-      contentType: 'application/xml'
+      contentType: 'application/xml',
+      body: ''
     }),
     []
   )
@@ -31,7 +33,8 @@ void test('a content type the document declares for the answered status has no p
     findApiContentTypeProblems({
       operation: OPERATION,
       status: 200,
-      contentType: 'application/json'
+      contentType: 'application/json',
+      body: ''
     }),
     []
   )
@@ -42,7 +45,8 @@ void test('a declared range of types holds every type inside it', () => {
     findApiContentTypeProblems({
       operation: OPERATION,
       status: 404,
-      contentType: 'application/problem+json'
+      contentType: 'application/problem+json',
+      body: ''
     }),
     []
   )
@@ -50,13 +54,18 @@ void test('a declared range of types holds every type inside it', () => {
 
 void test('a content type the document does not declare is listed with the ones it does', () => {
   assert.deepEqual(
-    findApiContentTypeProblems({ operation: OPERATION, status: 200, contentType: 'text/html' }),
+    findApiContentTypeProblems({
+      operation: OPERATION,
+      status: 200,
+      contentType: 'text/html',
+      body: ''
+    }),
     [
       'answered HTTP 200 as text/html; the document declares application/json; charset=utf-8, application/xml'
     ]
   )
   assert.deepEqual(
-    findApiContentTypeProblems({ operation: OPERATION, status: 404, contentType: '' }),
+    findApiContentTypeProblems({ operation: OPERATION, status: 404, contentType: '', body: '' }),
     ['answered HTTP 404 as no content type; the document declares application/*']
   )
 })
@@ -64,22 +73,33 @@ void test('a content type the document does not declare is listed with the ones 
 void test('an answer that names no content type is in no declared range', () => {
   const operation = operationWith([{ status: '200', contentTypes: ['*/*'] }])
 
-  assert.deepEqual(findApiContentTypeProblems({ operation, status: 200, contentType: '' }), [
-    'answered HTTP 200 as no content type; the document declares */*'
-  ])
   assert.deepEqual(
-    findApiContentTypeProblems({ operation, status: 200, contentType: 'image/png' }),
+    findApiContentTypeProblems({ operation, status: 200, contentType: '', body: '' }),
+    ['answered HTTP 200 as no content type; the document declares */*']
+  )
+  assert.deepEqual(
+    findApiContentTypeProblems({ operation, status: 200, contentType: 'image/png', body: '' }),
     []
   )
 })
 
 void test('a status with no declared body, or not declared at all, is not judged here', () => {
   assert.deepEqual(
-    findApiContentTypeProblems({ operation: OPERATION, status: 204, contentType: 'text/plain' }),
+    findApiContentTypeProblems({
+      operation: OPERATION,
+      status: 204,
+      contentType: 'text/plain',
+      body: ''
+    }),
     []
   )
   assert.deepEqual(
-    findApiContentTypeProblems({ operation: OPERATION, status: 302, contentType: 'text/html' }),
+    findApiContentTypeProblems({
+      operation: OPERATION,
+      status: 302,
+      contentType: 'text/html',
+      body: ''
+    }),
     []
   )
 })

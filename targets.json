@@ -5,6 +5,7 @@
       "baseUrl": "http://localhost:4020",
       "servesDemoSite": true,
       "expectedApiFailures": [
+        { "path": "/books/search", "check": "body" },
         { "path": "/authors", "check": "contentType" },
         { "path": "/authors/{authorId}", "check": "status" },
         { "path": "/stats", "check": "status" }
@@ -20,6 +21,7 @@
       "baseUrl": "http://localhost:4010",
       "servesDemoApi": true,
       "expectedApiFailures": [
+        { "path": "/books/search", "check": "body" },
         { "path": "/authors", "check": "contentType" },
         { "path": "/authors/{authorId}", "check": "status" },
         { "path": "/stats", "check": "status" }

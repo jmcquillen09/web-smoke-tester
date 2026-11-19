@@ -3,7 +3,7 @@
   "info": {
     "title": "Demo library API",
     "version": "1.0.0",
-    "description": "A small read-only API bundled with web-smoke-tester. Three of its operations break their own contract on purpose; docs/api-playwright.md lists them."
+    "description": "A small read-only API bundled with web-smoke-tester. Four of its operations break their own contract on purpose; docs/api-playwright.md lists them."
   },
   "servers": [
     {

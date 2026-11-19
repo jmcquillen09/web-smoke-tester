@@ -34,10 +34,12 @@ const API_ANSWER = {
     path: '/pets',
     url: 'https://site.example/pets',
     secured: false,
+    bodySchemas: [],
     responses: [{ status: '200', contentTypes: ['application/json'] }]
   },
   status: 200,
-  contentType: 'application/json'
+  contentType: 'application/json',
+  body: ''
 }
 
 void test('a state reads back the API answer it was given', () => {

@@ -18,8 +18,9 @@ export const requestApiOperation = async (
     })
     const [mediaType = ''] = (response.headers()['content-type'] ?? '').split(';')
     const status = response.status()
+    const body = await response.text()
     await response.dispose()
-    return { operation, status, contentType: mediaType.trim().toLowerCase() }
+    return { operation, status, contentType: mediaType.trim().toLowerCase(), body }
   } catch (error) {
     const reason = error instanceof Error ? (error.message.split('\n')[0] ?? '') : String(error)
     throw new E2eFixtureError(`GET ${operation.url} did not answer: ${reason}`)

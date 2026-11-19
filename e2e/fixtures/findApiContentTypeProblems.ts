@@ -1,17 +1,6 @@
 import type { ApiAnswer } from './ApiAnswer.ts'
 import { findDeclaredApiResponse } from './findDeclaredApiResponse.ts'
-
-// Whether an answer's media type is one the document declares: the same type, or a declared range
-// (`application/*`, `*/*`) that holds it.
-const isDeclaredContentType = (contentType: string, declared: string): boolean => {
-  const [declaredMediaType = ''] = declared.toLowerCase().split(';')
-  const [declaredType = '', declaredSubtype = ''] = declaredMediaType.trim().split('/')
-  const [type = '', subtype = ''] = contentType.split('/')
-  const hasMediaType = type !== '' && subtype !== ''
-  const isSameType = declaredType === '*' || declaredType === type
-  const isSameSubtype = declaredSubtype === '*' || declaredSubtype === subtype
-  return hasMediaType && isSameType && isSameSubtype
-}
+import { isDeclaredContentType } from './isDeclaredContentType.ts'
 
 // The answer's content type when it is none the document declares for the answered status, as one
 // line. A status the document does not declare is the status check's finding, not this one's.

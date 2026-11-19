@@ -26,6 +26,7 @@ void test('a GET operation becomes one request on the document’s server', () =
         path: '/pets',
         url: 'https://api.example/api/v3/pets',
         secured: false,
+        bodySchemas: [],
         responses: [{ status: '200', contentTypes: ['application/json'] }]
       }
     ],
@@ -436,6 +437,55 @@ void test('the outermost path parameter without a value is the one awaited, what
       path: '/pets/{petId}/visits/{visitId}',
       parameter: 'petId',
       listUrl: 'https://api.example/pets'
+    }
+  ])
+})
+
+void test('a response’s schema is handed on, standing alone, for each content type that declares one', () => {
+  const pet = { type: 'object', required: ['id'], properties: { id: { type: 'integer' } } }
+  const document = documentWith(
+    {
+      '/pets': {
+        get: {
+          responses: {
+            '200': {
+              content: {
+                'application/json': {
+                  schema: { type: 'array', items: { $ref: '#/components/schemas/Pet' } }
+                },
+                'text/csv': {}
+              }
+            },
+            '404': { $ref: '#/components/responses/NotFound' }
+          }
+        }
+      }
+    },
+    {
+      components: {
+        schemas: { Pet: pet, Unused: { type: 'string' } },
+        responses: {
+          NotFound: { content: { 'application/problem+json': { schema: { type: 'object' } } } }
+        }
+      }
+    }
+  )
+
+  const [operation] = planApiOperations(document, DOCUMENT_URL).operations
+
+  assert.deepEqual(operation?.bodySchemas, [
+    {
+      status: '200',
+      contentType: 'application/json',
+      schema: {
+        allOf: [{ type: 'array', items: { $ref: '#/components/schemas/Pet' } }],
+        components: { schemas: { Pet: pet } }
+      }
+    },
+    {
+      status: '404',
+      contentType: 'application/problem+json',
+      schema: { allOf: [{ type: 'object' }], components: { schemas: {} } }
     }
   ])
 })

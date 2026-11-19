@@ -46,6 +46,10 @@ export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
 // What the report shows on an API test the target's `expectedApiFailures` names.
 export const EXPECTED_API_FAILURE =
   'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'
+// Where an OpenAPI document keeps the schemas its responses point at with `$ref`.
+export const SCHEMA_REFERENCE = '#/components/schemas/'
+// How a schema says it is written in JSON Schema 2020-12, the dialect of OpenAPI 3.1.
+export const JSON_SCHEMA_2020_12 = 'https://json-schema.org/draft/2020-12/schema'
 // The most operations one API run requests.
 export const API_OPERATION_LIMIT = 50
 

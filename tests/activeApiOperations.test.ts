@@ -13,6 +13,7 @@ const OPERATION: ApiOperation = {
   path: '/pets/{petId}',
   url: 'https://api.example/pets/7',
   secured: false,
+  bodySchemas: [],
   responses: [{ status: '200', contentTypes: ['application/json'] }]
 }
 
