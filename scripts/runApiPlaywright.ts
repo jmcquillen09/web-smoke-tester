@@ -7,6 +7,7 @@ import path from 'node:path'
 import { demoApi } from '../demo/demoApi.ts'
 import { withDemoServer } from '../demo/withDemoServer.ts'
 import { assertExpectedApiFailuresPlanned } from '../e2e/assertExpectedApiFailuresPlanned.ts'
+import { assertSiteAnswers } from '../e2e/assertSiteAnswers.ts'
 import { API_OPERATIONS_VARIABLE, API_PROJECT, TARGET_VARIABLE } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
@@ -35,9 +36,11 @@ const log = (message: string): void => {
 }
 
 const runApiTests = async (): Promise<ChildOutcome> => {
-  const discovered = await withSiteRequest(settings, (siteRequest) =>
-    discoverOpenApiDocument(settings, (url) => fetchOpenApiDocument(siteRequest, url))
-  )
+  const discovered = await withSiteRequest(settings, async (siteRequest) => {
+    // Asked first, so a site that is down or whose certificate is refused is named as that.
+    await assertSiteAnswers(settings, siteRequest)
+    return discoverOpenApiDocument(settings, (url) => fetchOpenApiDocument(siteRequest, url))
+  })
   const plan = planApiOperations(discovered.document, discovered.url)
   console.log(
     `${COMMAND}: testing ${String(plan.operations.length)} GET operation(s) from ${discovered.url} (${settings.target})`
