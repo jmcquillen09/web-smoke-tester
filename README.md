@@ -38,7 +38,10 @@ example values, and checks each answer:
 | Documented content | the answer's content type is one the document declares for that status               |
 
 Only `GET` is ever requested, with no credentials and no body, and every operation a run leaves
-out is printed with the reason. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
+out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: three
+of its operations break their own document on purpose. A run against it shows eleven passing tests
+and three expected failures, one per seeded bug, and fails if a bug goes uncaught or anything else
+is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
 document is found and which operations a run requests.
 
 ## Running
@@ -69,8 +72,9 @@ document is found and which operations a run requests.
   alone.
 - The HTML report lands in `playwright-report/` (`npx playwright show-report`), failure traces and
   screenshots in `test-results/`.
-- `npm run test:api-playwright [target]` runs the API checks against that target, for example
-  `npm run test:api-playwright petstore`.
+- `npm run test:api-playwright [target]` runs the API checks against that target. To try them on
+  the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
+  the tests and shuts the demo API down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
   `npm run format:check` checks formatting.
 
@@ -85,4 +89,7 @@ document is found and which operations a run requests.
   one state through several (`runWorkflow`).
 - Each browser runs as two Playwright projects, `isolated-<browser>` and `workflows-<browser>`, the
   second gated on the first.
+- [`demo/createDemoApiServer.ts`](demo/createDemoApiServer.ts) is the bundled demo API. An API run
+  against a target that sets `servesDemoApi` starts it and shuts it down;
+  [`scripts/serveDemoApi.ts`](scripts/serveDemoApi.ts) serves it on its own.
 - Everything is TypeScript that Node runs directly; there is no build step and no other runtime.

@@ -36,6 +36,7 @@
   },
   "include": [
     "e2e/**/*.ts",
+    "demo/**/*.ts",
     "tests/**/*.ts",
     "scripts/**/*.ts",
     "support/**/*.ts",

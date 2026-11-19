@@ -14,17 +14,63 @@ run.
 ```bash
 npx playwright install chromium         # once per machine
 npm run test:api-playwright             # the defaultTarget in targets.json
-npm run test:api-playwright petstore    # the target named "petstore"
+npm run test:api-playwright staging     # the target named "staging"
 ```
 
 Arguments after the target pass to `playwright test`, as in the site suite:
-`npm run test:api-playwright -- petstore -g "/pet"`. The runner prints the document it found, how
+`npm run test:api-playwright -- staging -g "/books"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
 site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site offers no
 document, the document has no operation a run can request, or an expected failure names an
 operation the run does not request; `2` the run was refused before it started.
 
 Only test APIs you own or have permission to test.
+
+## The demo API
+
+The repo bundles a small read-only API to run the checks against, under [`demo/`](../demo): fixed
+data, no state between requests, and an OpenAPI document at `/openapi.json`
+([`demo/openapi.json`](../demo/openapi.json)). Three of its operations break that document on
+purpose, so a run shows what a failure looks like.
+
+```bash
+npm run test:api-playwright demo-api
+```
+
+The `demo-api` target sets `servesDemoApi`, so the one command does the whole run
+([`scripts/runApiPlaywright.ts`](../scripts/runApiPlaywright.ts)):
+
+1. It starts the demo API at the target's address and waits until it is listening
+   ([`demo/startDemoApiServer.ts`](../demo/startDemoApiServer.ts)).
+2. It finds the document, plans the operations and runs the tests.
+3. It stops the demo API, whether the tests passed, failed or never started, and waits until the
+   API no longer listens and every connection to it has ended
+   ([`demo/stopDemoApiServer.ts`](../demo/stopDemoApiServer.ts)). Only then does the command exit.
+
+The run prints `the demo API is running at …` and `the demo API has shut down` around the tests.
+A port something else holds stops the run with the reason before any test starts.
+`npm run serve:demo-api` serves the same API until stopped, to explore it by hand; stop it before
+an API run against `demo-api`, which needs the port.
+
+A run plans seven operations, so fourteen tests. Eleven pass, and the three that catch a seeded
+bug fail as the `demo-api` target's `expectedApiFailures` says they will, so the run is green and
+exits `0`.
+
+| Operation                 | The demo API answers                | Result                                                                 |
+| ------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `GET /books`              | 200, JSON                           | both checks pass                                                       |
+| `GET /books/search`       | 200, JSON                           | both checks pass                                                       |
+| `GET /books/{bookId}`     | 200, JSON                           | both checks pass                                                       |
+| `GET /authors`            | 200, as `text/html`                 | expected failure of the content type check: the document declares JSON |
+| `GET /authors/{authorId}` | 500                                 | expected failure of the status check: a server error                   |
+| `GET /stats`              | 202                                 | expected failure of the status check: the document declares only 200   |
+| `GET /account`            | 401, an operation marked as secured | both checks pass: a run sends no credentials                           |
+
+It skips two more with the reason: `GET /books/{bookId}/reviews/{reviewId}` (no example value for
+`reviewId`) and `GET /session/logout` (a path `UNSAFE_LINK` matches).
+[`tests/createDemoApiServer.test.ts`](../tests/createDemoApiServer.test.ts) serves the demo API on
+a free port inside `npm test` and asserts exactly these findings, and that the target's
+`expectedApiFailures` names exactly the checks that find one, with no browser.
 
 ## Expected failures
 

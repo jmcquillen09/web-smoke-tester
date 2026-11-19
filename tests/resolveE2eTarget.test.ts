@@ -21,6 +21,7 @@ void test('a target with only a base URL tests its start page and crawls by defa
     ignoreHttpsErrors: false,
     blockTracking: true,
     apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
+    servesDemoApi: false,
     expectedApiFailures: []
   })
 })
@@ -52,6 +53,7 @@ void test('a target keeps the paths, crawl limit and certificate setting it name
     ignoreHttpsErrors: true,
     blockTracking: true,
     apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
+    servesDemoApi: false,
     expectedApiFailures: []
   })
 })
@@ -152,6 +154,25 @@ void test('an OpenAPI document path must start from the root of the site', () =>
   assert.throws(() => resolveE2eTarget('staging', targets), {
     name: 'E2eConfigurationError'
   })
+})
+
+void test('a target can have an API run serve the demo API at its local address', () => {
+  const targets = targetsWith({
+    demo: { baseUrl: 'http://localhost:4010', servesDemoApi: true }
+  })
+
+  assert.equal(resolveE2eTarget('demo', targets).servesDemoApi, true)
+})
+
+void test('the demo API is served only at a local http address with a port', () => {
+  for (const baseUrl of ['https://www.example.com', 'http://localhost', 'https://localhost:4010']) {
+    const targets = targetsWith({ demo: { baseUrl, servesDemoApi: true } })
+
+    assert.throws(() => resolveE2eTarget('demo', targets), {
+      name: 'E2eConfigurationError',
+      message: `The demo target serves the demo API, so its baseUrl must be http://localhost:<port>; "${baseUrl}" is not.`
+    })
+  }
 })
 
 void test('a target keeps the API checks it expects to fail', () => {

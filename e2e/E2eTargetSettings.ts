@@ -15,6 +15,8 @@ export interface E2eTargetSettings {
   readonly blockTracking: boolean
   /** Where an API run looks for the site's OpenAPI document, in order, as paths from the site's root. */
   readonly apiSpecPaths: readonly string[]
+  /** Whether an API run serves the bundled demo API at `baseUrl` for the length of the run. */
+  readonly servesDemoApi: boolean
   /** The API checks known to fail on this site: reported as expected failures, and a failed run once one passes. */
   readonly expectedApiFailures: readonly { readonly path: string; readonly check: ApiCheck }[]
   /** The desktop browser window's size; absent for the browser's own default. */

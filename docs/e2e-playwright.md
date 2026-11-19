@@ -65,6 +65,7 @@ A target is a named site. [`targets.json`](../targets.json) at the repo root hol
 | `blockTracking`       | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
 | `viewport`            | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
 | `apiSpecPath`         | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.      |
+| `servesDemoApi`       | no       | `false`                                | Have an [API run](api-playwright.md) serve the bundled demo API at `baseUrl` for the length of the run. `baseUrl` must then be `http://localhost:<port>`.  |
 | `expectedApiFailures` | no       | none                                   | The API checks known to fail on this site, each `{ "path": "/stats", "check": "status" }`. See [Expected failures](api-playwright.md#expected-failures).   |
 | `disabled`            | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
 
