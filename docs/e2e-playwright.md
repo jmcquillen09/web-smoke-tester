@@ -14,6 +14,18 @@ npm run test:e2e-playwright                # the defaultTarget in targets.json: 
 npm run test:e2e-playwright staging        # the target named "staging"
 ```
 
+Three commands run the tests, each against a target:
+
+| Command                                | Runs                                                             |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `npm run test:e2e-playwright [target]` | the web tests and the [API tests](api-playwright.md), in one run |
+| `npm run test:web-playwright [target]` | the web tests only                                               |
+| `npm run test:api-playwright [target]` | the API tests only                                               |
+
+`test:e2e-playwright` looks for the site's OpenAPI document as an API run does. A site that
+publishes none, or one with no operation a run can request, is told so in the same words, and the
+run goes on with the web tests alone: a missing document does not fail it.
+
 Arguments after the target pass straight to `playwright test`, for example
 `npm run test:e2e-playwright -- staging e2e/brokenLinks.spec.ts --headed` or
 `npm run test:e2e-playwright -- staging --ui`. Put `--` before them whenever they include a flag: npm
@@ -28,8 +40,9 @@ record the run's target, the site it resolved to (`site`) and its browsers, plus
 needs its own folders uses Playwright's switches: `--output <dir>` for traces and screenshots,
 `PLAYWRIGHT_HTML_OUTPUT_DIR` and `PLAYWRIGHT_JSON_OUTPUT_FILE` for the reports.
 
-Exit codes: `0` every test passed, `1` a test failed or the site did not answer, `2` the run was
-refused before it started (an unknown target or browser, a disabled target, a malformed targets
+Exit codes: `0` every test passed (or failed as its target expects), `1` a test failed, the site
+did not answer or an expected API failure names an operation the run does not request, `2` the run
+was refused before it started (an unknown target or browser, a disabled target, a malformed targets
 file).
 
 ## The demo site
@@ -46,10 +59,10 @@ npm run test:e2e-playwright demo-site
 ```
 
 The `demo-site` target sets `servesDemoSite`, so the one command does the whole run
-([`scripts/runE2ePlaywright.ts`](../scripts/runE2ePlaywright.ts)):
+([`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts)):
 
 1. It starts the demo site at the target's address and waits until it is listening.
-2. It finds the site's pages and runs the tests.
+2. It finds the site's pages and its API's operations, and runs the tests.
 3. It stops the demo site, whether the tests passed, failed or never started, and waits until the
    site no longer listens and every connection to it has ended. Only then does the command exit.
 
@@ -248,9 +261,15 @@ patterns) live in [`e2e/constants.ts`](../e2e/constants.ts).
 
 ## How a run is put together
 
-1. [`scripts/runE2ePlaywright.ts`](../scripts/runE2ePlaywright.ts) takes `--browser` and the target
-   out of the arguments, resolves the target from `targets.json`, and finds the site's pages.
-2. It starts `playwright test` with `E2E_TARGET`, `E2E_BROWSER` and `E2E_SITE_PAGES` set.
+1. The command's script under [`scripts/`](../scripts) (`runE2ePlaywright.ts`,
+   `runWebPlaywright.ts` or `runApiPlaywright.ts`) takes `--browser` and the target out of the
+   arguments and resolves the target from `targets.json`.
+2. [`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts) serves the demo server the
+   target names, checks that the site answers, and has the command find what to test: the site's
+   pages ([`e2e/planWebRun.ts`](../e2e/planWebRun.ts)), its API's operations
+   ([`e2e/planApiRun.ts`](../e2e/planApiRun.ts)), or both. It then starts `playwright test` with
+   `E2E_TARGET`, `E2E_BROWSER`, `E2E_SITE_PAGES` and `E2E_API_OPERATIONS` set. A web-only run hands
+   over no operations, and an API-only run names only the `api` project.
 3. [`playwright.config.ts`](../playwright.config.ts) resolves the same target and browsers through
    the same functions, and builds the projects.
 4. [`e2e/globalSetup.ts`](../e2e/globalSetup.ts) asks the site for its start page once

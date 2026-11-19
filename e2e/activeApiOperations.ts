@@ -5,7 +5,7 @@ import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
 
 const ApiOperationsSchema = z.array(ApiOperationSchema)
 
-// The API operations scripts/runApiPlaywright.ts planned for this run. A run started without it
+// The API operations the runner (e2e/planApiRun.ts) planned for this run. A run started without it
 // has none, so the API specs write no tests.
 export const activeApiOperations = (
   env: Readonly<Record<string, string | undefined>> = process.env

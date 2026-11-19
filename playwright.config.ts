@@ -6,10 +6,8 @@ import { createApiProject } from './e2e/createApiProject.ts'
 import { createE2eProjects } from './e2e/createE2eProjects.ts'
 import { createRunMetadata } from './e2e/createRunMetadata.ts'
 
-// Run through `npm run test:e2e-playwright [target]` (scripts/runE2ePlaywright.ts), which sets
-// E2E_TARGET, E2E_BROWSER and E2E_SITE_PAGES; e2e/resolveE2eTarget.ts maps the target to its site
-// from targets.json and e2e/createE2eProjects.ts gives each browser its isolated and workflows
-// projects.
+// Run through `npm run test:e2e-playwright [target]` or its web-only and API-only siblings, which
+// set the E2E_* variables read here (e2e/runPlaywrightForTarget.ts).
 const target = activeE2eTarget()
 const browsers = activeE2eBrowsers()
 const isCi = process.env['CI'] !== undefined
@@ -24,7 +22,7 @@ export default defineConfig({
   fullyParallel: true,
   // Shown in the HTML report and written to the JSON one, so a report says what it tested.
   metadata: createRunMetadata(target, browsers, process.env),
-  // The api project has tests only in a run `npm run test:api-playwright` starts.
+  // The api project has tests only in a run that hands over the operations of an OpenAPI document.
   projects: [...createE2eProjects(browsers, target), createApiProject()],
   // The JSON report tells failed assertions apart from a run that never got going. A run picks its
   // own folders with Playwright's own switches: `--output` for traces and screenshots,

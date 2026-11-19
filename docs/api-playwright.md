@@ -5,6 +5,9 @@ request per `GET` operation in it, and checks each answer against what the docum
 needs no access to the API's code and only ever reads: no other method is requested, no credentials
 are sent, and no request body is built.
 
+`npm run test:e2e-playwright [target]` runs these same API tests together with the web tests. There
+a site with no document to test is told so and gets its web tests alone; here it fails the run.
+
 It shares the site suite's targets, stages, runners and reports; read
 [`e2e-playwright.md`](e2e-playwright.md) for those. This page covers what is particular to the API
 run.
@@ -38,7 +41,7 @@ npm run test:api-playwright demo-api
 ```
 
 The `demo-api` target sets `servesDemoApi`, so the one command does the whole run
-([`scripts/runApiPlaywright.ts`](../scripts/runApiPlaywright.ts)):
+([`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts)):
 
 1. It starts the demo API at the target's address and waits until it is listening
    ([`demo/startDemoServer.ts`](../demo/startDemoServer.ts)).

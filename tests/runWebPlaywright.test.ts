@@ -7,11 +7,11 @@ import test from 'node:test'
 import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
-import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { API_OPERATIONS_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
-const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runE2ePlaywright.ts')
+const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runWebPlaywright.ts')
 
 const targetsFileFor = (port: number): string =>
   writeTargetsFile(
@@ -26,7 +26,20 @@ const targetsFileFor = (port: number): string =>
 const listSiteTests = (targetsFile: string): Promise<{ code: number; output: string }> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [RUNNER, 'demo', '--list'], {
-      env: { ...process.env, [TARGETS_FILE_VARIABLE]: targetsFile }
+      env: {
+        ...process.env,
+        [TARGETS_FILE_VARIABLE]: targetsFile,
+        // Left over from another run: a web run must not pick these up.
+        [API_OPERATIONS_VARIABLE]: JSON.stringify([
+          {
+            method: 'GET',
+            path: '/books',
+            url: 'http://localhost/api/books',
+            secured: false,
+            responses: []
+          }
+        ])
+      }
     })
     let output = ''
     child.stdout.on('data', (chunk: Buffer) => (output += chunk.toString()))
@@ -50,6 +63,8 @@ void test('a run against a target that serves the demo site starts it, crawls it
   const stopped = run.output.indexOf('the demo site has shut down')
   assert.equal(started >= 0 && started < crawled && crawled < stopped, true, run.output)
   assert.match(run.output, /\/, \/books, \/about/)
+  assert.match(run.output, /\[isolated-chrome\] › /)
+  assert.doesNotMatch(run.output, /\[api\] › /)
   const next = await startDemoServer(demoSite, port, HOST)
   await stopDemoServer(demoSite, next)
 })

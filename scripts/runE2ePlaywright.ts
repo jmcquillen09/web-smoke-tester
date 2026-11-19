@@ -1,24 +1,22 @@
 #!/usr/bin/env node
-// `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: runs `playwright test`
-// on the pages found on the target's site, serving a demo server when the target asks.
+// `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: runs the web tests and
+// the API tests in one `playwright test`. A site with no OpenAPI document gets the web tests alone.
 
-import { createRequire } from 'node:module'
-import path from 'node:path'
-import { withTargetDemoServer } from '../demo/withTargetDemoServer.ts'
-import { BROWSER_VARIABLE, SITE_PAGES_VARIABLE, TARGET_VARIABLE } from '../e2e/constants.ts'
-import { discoverSitePages } from '../e2e/discoverSitePages.ts'
-import { fetchPageHtml } from '../e2e/fetchPageHtml.ts'
+import type { ApiOperation } from '../e2e/ApiOperation.ts'
+import { API_OPERATIONS_VARIABLE, BROWSER_VARIABLE, SITE_PAGES_VARIABLE } from '../e2e/constants.ts'
+import { E2eApiDocumentError } from '../e2e/errors/E2eApiDocumentError.ts'
+import { planApiRun } from '../e2e/planApiRun.ts'
+import { planWebRun } from '../e2e/planWebRun.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eBrowsers } from '../e2e/resolveE2eBrowsers.ts'
+import { runPlaywrightForTarget } from '../e2e/runPlaywrightForTarget.ts'
 import { takeBrowserArgument } from '../e2e/takeBrowserArgument.ts'
 import { takeE2eTarget } from '../e2e/takeE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
-import { withSiteRequest } from '../e2e/withSiteRequest.ts'
-import type { ChildOutcome } from '../support/ChildOutcome.ts'
-import { spawnChild } from '../support/spawnChild.ts'
 import { stopOnConfigurationError } from '../support/stopOnConfigurationError.ts'
 
 const COMMAND = 'test:e2e-playwright'
+const NO_OPERATIONS: readonly ApiOperation[] = []
 
 const { choice: browser, rest: args } = takeBrowserArgument(process.argv.slice(2))
 // Checked here so a bad choice stops the run before the crawl; playwright.config.ts resolves the
@@ -29,40 +27,22 @@ const { settings, rest: playwrightArgs } = stopOnConfigurationError(COMMAND, () 
   takeE2eTarget(args, readE2eTargets(targetsFilePath(process.env)))
 )
 
-// Node runs Playwright's CLI module directly; spawning `npx` fails on Windows, where it is a .cmd shim.
-const playwrightCli = createRequire(import.meta.url).resolve('@playwright/test/cli')
-
-const repoRoot = path.join(import.meta.dirname, '..')
-
-const log = (message: string): void => {
-  console.log(`${COMMAND}: ${message}`)
-}
-
-const runSiteTests = async (): Promise<ChildOutcome> => {
-  const pages = await withSiteRequest(settings, (siteRequest) =>
-    discoverSitePages(settings, (url) => fetchPageHtml(siteRequest, url))
-  )
-  console.log(
-    `${COMMAND}: testing ${String(pages.length)} page(s) on ${settings.baseUrl} (${settings.target}): ${pages.join(', ')}`
-  )
-  return spawnChild(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
-    cwd: repoRoot,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      [TARGET_VARIABLE]: settings.target,
-      [BROWSER_VARIABLE]: browser,
-      [SITE_PAGES_VARIABLE]: JSON.stringify(pages)
-    }
+await runPlaywrightForTarget(COMMAND, settings, playwrightArgs, async (siteRequest, log) => {
+  const pages = await planWebRun(settings, siteRequest, log)
+  const operations = await planApiRun(settings, siteRequest, log).catch((error: unknown) => {
+    const hasNoDocument = error instanceof E2eApiDocumentError
+    if (!hasNoDocument) throw error
+    // The site has no API a run can test; that is said, and its pages are tested all the same.
+    console.error(`${COMMAND}: ${error.message}`)
+    log('running the web tests only')
+    return NO_OPERATIONS
   })
-}
-
-try {
-  // With a demo server, the process ends only once it has shut down, so nothing is left on the port.
-  const outcome = await withTargetDemoServer(settings, log, runSiteTests)
-  if (outcome.kind === 'signalled') process.kill(process.pid, outcome.signal)
-  process.exit(outcome.kind === 'exited' ? outcome.code : 1)
-} catch (error) {
-  console.error(`${COMMAND}: ${error instanceof Error ? error.message : String(error)}`)
-  process.exit(1)
-}
+  return {
+    env: {
+      [BROWSER_VARIABLE]: browser,
+      [SITE_PAGES_VARIABLE]: JSON.stringify(pages),
+      [API_OPERATIONS_VARIABLE]: JSON.stringify(operations)
+    },
+    args: []
+  }
+})
