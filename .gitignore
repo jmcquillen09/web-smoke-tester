@@ -8,8 +8,10 @@ playwright/.cache/
 docs/plans/
 
 # Kept local, not published: git hooks, agent files, and the patterns and standards docs.
+# The CI workflows under .github/ are published: GitHub only runs a workflow it can see.
 /.githooks/
-/.github/
+/.github/*
+!/.github/workflows/
 /.agents/
 /.codex/
 /.mcp.json

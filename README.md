@@ -81,6 +81,10 @@ document is found and which operations a run requests.
   the tests and shuts the demo API down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
   `npm run format:check` checks formatting.
+- Every pull request and every push to `main` runs these in GitHub Actions
+  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the typecheck and unit tests on Linux,
+  Windows and macOS, the format check, and the web and API tests against the demo site in Chrome,
+  Firefox and Safari's engine. The `ci-gate` job passes only when all of them did.
 
 ## How it is built
 
