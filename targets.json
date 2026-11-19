@@ -1,6 +1,10 @@
 {
-  "defaultTarget": "example",
+  "defaultTarget": "demo-site",
   "targets": {
+    "demo-site": {
+      "baseUrl": "http://localhost:4020",
+      "servesDemoSite": true
+    },
     "example": {
       "baseUrl": "https://example.com"
     },

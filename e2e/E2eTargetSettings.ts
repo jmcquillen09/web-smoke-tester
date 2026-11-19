@@ -17,6 +17,8 @@ export interface E2eTargetSettings {
   readonly apiSpecPaths: readonly string[]
   /** Whether an API run serves the bundled demo API at `baseUrl` for the length of the run. */
   readonly servesDemoApi: boolean
+  /** Whether a site run serves the bundled demo site at `baseUrl` for the length of the run. */
+  readonly servesDemoSite: boolean
   /** The API checks known to fail on this site: reported as expected failures, and a failed run once one passes. */
   readonly expectedApiFailures: readonly { readonly path: string; readonly check: ApiCheck }[]
   /** The desktop browser window's size; absent for the browser's own default. */

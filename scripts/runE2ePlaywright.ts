@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: Playwright rejects a
-// bare target name, so it becomes E2E_TARGET, --browser becomes E2E_BROWSER, the pages found on the
-// site become E2E_SITE_PAGES, and the rest passes to `playwright test`.
+// `npm run test:e2e-playwright [target] [--browser=<b>[,<b>...]] [args...]`: runs `playwright test`
+// on the pages found on the target's site, serving the demo site when the target asks.
 
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { demoSite } from '../demo/demoSite.ts'
+import { withDemoServer } from '../demo/withDemoServer.ts'
 import { BROWSER_VARIABLE, SITE_PAGES_VARIABLE, TARGET_VARIABLE } from '../e2e/constants.ts'
 import { discoverSitePages } from '../e2e/discoverSitePages.ts'
 import { fetchPageHtml } from '../e2e/fetchPageHtml.ts'
@@ -14,6 +15,7 @@ import { takeBrowserArgument } from '../e2e/takeBrowserArgument.ts'
 import { takeE2eTarget } from '../e2e/takeE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
+import type { ChildOutcome } from '../support/ChildOutcome.ts'
 import { spawnChild } from '../support/spawnChild.ts'
 import { stopOnConfigurationError } from '../support/stopOnConfigurationError.ts'
 
@@ -33,14 +35,18 @@ const playwrightCli = createRequire(import.meta.url).resolve('@playwright/test/c
 
 const repoRoot = path.join(import.meta.dirname, '..')
 
-try {
+const log = (message: string): void => {
+  console.log(`${COMMAND}: ${message}`)
+}
+
+const runSiteTests = async (): Promise<ChildOutcome> => {
   const pages = await withSiteRequest(settings, (siteRequest) =>
     discoverSitePages(settings, (url) => fetchPageHtml(siteRequest, url))
   )
   console.log(
     `${COMMAND}: testing ${String(pages.length)} page(s) on ${settings.baseUrl} (${settings.target}): ${pages.join(', ')}`
   )
-  const outcome = await spawnChild(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
+  return spawnChild(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
     cwd: repoRoot,
     stdio: 'inherit',
     env: {
@@ -50,6 +56,13 @@ try {
       [SITE_PAGES_VARIABLE]: JSON.stringify(pages)
     }
   })
+}
+
+try {
+  // With a demo site, the process ends only once it has shut down, so nothing is left on the port.
+  const outcome = settings.servesDemoSite
+    ? await withDemoServer(demoSite, settings.baseUrl, log, runSiteTests)
+    : await runSiteTests()
   if (outcome.kind === 'signalled') process.kill(process.pid, outcome.signal)
   process.exit(outcome.kind === 'exited' ? outcome.code : 1)
 } catch (error) {
