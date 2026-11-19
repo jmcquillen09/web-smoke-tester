@@ -17,6 +17,7 @@ import { planApiOperations } from '../e2e/planApiOperations.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
+import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 
 // Serves the demo API on a free port for one test and hands it the API's address.
 const withDemoApi = async (work: (baseUrl: string) => Promise<void>): Promise<void> => {
@@ -30,9 +31,11 @@ const withDemoApi = async (work: (baseUrl: string) => Promise<void>): Promise<vo
 }
 
 const planDemoApi = async (baseUrl: string) => {
-  const discovered = await discoverOpenApiDocument(
-    { target: 'demo-api', baseUrl, apiSpecPaths: OPENAPI_DOCUMENT_PATHS },
-    fetchOpenApiDocument
+  const discovered = await withSiteRequest({ ignoreHttpsErrors: false }, (siteRequest) =>
+    discoverOpenApiDocument(
+      { target: 'demo-api', baseUrl, apiSpecPaths: OPENAPI_DOCUMENT_PATHS },
+      (url) => fetchOpenApiDocument(siteRequest, url)
+    )
   )
   return planApiOperations(discovered.document, discovered.url)
 }

@@ -3,10 +3,20 @@ import { createServer, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
-import { fetchSiteText } from '../e2e/fetchSiteText.ts'
+import { fetchSiteText as fetchSiteTextWith } from '../e2e/fetchSiteText.ts'
+import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 
 const HOST = '127.0.0.1'
 const anyType = (): boolean => true
+
+const fetchSiteText = (
+  url: string,
+  accept: string,
+  isWantedType: (contentType: string) => boolean
+): ReturnType<typeof fetchSiteTextWith> =>
+  withSiteRequest({ ignoreHttpsErrors: false }, (siteRequest) =>
+    fetchSiteTextWith(siteRequest, url, accept, isWantedType)
+  )
 
 type Answer = (response: ServerResponse) => void
 

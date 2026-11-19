@@ -13,6 +13,7 @@ import { resolveE2eBrowsers } from '../e2e/resolveE2eBrowsers.ts'
 import { takeBrowserArgument } from '../e2e/takeBrowserArgument.ts'
 import { takeE2eTarget } from '../e2e/takeE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
+import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import { spawnChild } from '../support/spawnChild.ts'
 import { stopOnConfigurationError } from '../support/stopOnConfigurationError.ts'
 
@@ -33,7 +34,9 @@ const playwrightCli = createRequire(import.meta.url).resolve('@playwright/test/c
 const repoRoot = path.join(import.meta.dirname, '..')
 
 try {
-  const pages = await discoverSitePages(settings, fetchPageHtml)
+  const pages = await withSiteRequest(settings, (siteRequest) =>
+    discoverSitePages(settings, (url) => fetchPageHtml(siteRequest, url))
+  )
   console.log(
     `${COMMAND}: testing ${String(pages.length)} page(s) on ${settings.baseUrl} (${settings.target}): ${pages.join(', ')}`
   )

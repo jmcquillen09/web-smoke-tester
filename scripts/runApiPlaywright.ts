@@ -14,6 +14,7 @@ import { planApiOperations } from '../e2e/planApiOperations.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { takeE2eTarget } from '../e2e/takeE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
+import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import type { ChildOutcome } from '../support/ChildOutcome.ts'
 import { spawnChild } from '../support/spawnChild.ts'
 import { stopOnConfigurationError } from '../support/stopOnConfigurationError.ts'
@@ -42,7 +43,9 @@ const serveDemoApi = async (): Promise<() => Promise<void>> => {
 }
 
 const runApiTests = async (): Promise<ChildOutcome> => {
-  const discovered = await discoverOpenApiDocument(settings, fetchOpenApiDocument)
+  const discovered = await withSiteRequest(settings, (siteRequest) =>
+    discoverOpenApiDocument(settings, (url) => fetchOpenApiDocument(siteRequest, url))
+  )
   const plan = planApiOperations(discovered.document, discovered.url)
   console.log(
     `${COMMAND}: testing ${String(plan.operations.length)} GET operation(s) from ${discovered.url} (${settings.target})`
