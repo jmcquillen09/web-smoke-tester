@@ -30,7 +30,8 @@ follow a link and come back.
 `npm run test:api-playwright [target]` tests a site's API from the OpenAPI document it publishes.
 The runner finds the document (a target's `apiSpecPath`, or the usual addresses such as
 `/openapi.json` and `/v3/api-docs`), plans one request per `GET` operation from the document's own
-example values, and checks each answer:
+example values (a path parameter without one takes a value from the list operation one level up),
+and checks each answer:
 
 | Check              | An operation passes when                                                             |
 | ------------------ | ------------------------------------------------------------------------------------ |
@@ -39,7 +40,7 @@ example values, and checks each answer:
 
 Only `GET` is ever requested, with no credentials and no body, and every operation a run leaves
 out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: three
-of its operations break their own document on purpose. A run against it shows eleven passing tests
+of its operations break their own document on purpose. A run against it shows fifteen passing tests
 and three expected failures, one per seeded bug, and fails if a bug goes uncaught or anything else
 is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
 document is found and which operations a run requests.

@@ -56,22 +56,25 @@ document beside its pages, so `npm run test:api-playwright` with no target gives
 `npm run serve:demo-api` serves the same API until stopped, to explore it by hand; stop it before
 an API run against `demo-api`, which needs the port.
 
-A run plans seven operations, so fourteen tests. Eleven pass, and the three that catch a seeded
+A run plans nine operations, so eighteen tests. Fifteen pass, and the three that catch a seeded
 bug fail as the `demo-api` target's `expectedApiFailures` says they will, so the run is green and
 exits `0`.
 
-| Operation                 | The demo API answers                | Result                                                                 |
-| ------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `GET /books`              | 200, JSON                           | both checks pass                                                       |
-| `GET /books/search`       | 200, JSON                           | both checks pass                                                       |
-| `GET /books/{bookId}`     | 200, JSON                           | both checks pass                                                       |
-| `GET /authors`            | 200, as `text/html`                 | expected failure of the content type check: the document declares JSON |
-| `GET /authors/{authorId}` | 500                                 | expected failure of the status check: a server error                   |
-| `GET /stats`              | 202                                 | expected failure of the status check: the document declares only 200   |
-| `GET /account`            | 401, an operation marked as secured | both checks pass: a run sends no credentials                           |
+| Operation                                | The demo API answers                | Result                                                                 |
+| ---------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `GET /books`                             | 200, JSON                           | both checks pass                                                       |
+| `GET /books/search`                      | 200, JSON                           | both checks pass                                                       |
+| `GET /books/{bookId}`                    | 200, JSON                           | both checks pass                                                       |
+| `GET /books/{bookId}/reviews`            | 200, JSON                           | both checks pass                                                       |
+| `GET /books/{bookId}/reviews/{reviewId}` | 200, JSON                           | both checks pass, on the review the list names                         |
+| `GET /authors`                           | 200, as `text/html`                 | expected failure of the content type check: the document declares JSON |
+| `GET /authors/{authorId}`                | 500                                 | expected failure of the status check: a server error                   |
+| `GET /stats`                             | 202                                 | expected failure of the status check: the document declares only 200   |
+| `GET /account`                           | 401, an operation marked as secured | both checks pass: a run sends no credentials                           |
 
-It skips two more with the reason: `GET /books/{bookId}/reviews/{reviewId}` (no example value for
-`reviewId`) and `GET /session/logout` (a path `UNSAFE_LINK` matches).
+The document gives no example for `reviewId`, so the run takes it from the first review
+`GET /books/{bookId}/reviews` lists and says so. It skips one more operation with the reason:
+`GET /session/logout` (a path `UNSAFE_LINK` matches).
 [`tests/createDemoApiServer.test.ts`](../tests/createDemoApiServer.test.ts) serves the demo API on
 a free port inside `npm test` and asserts exactly these findings, and that the target's
 `expectedApiFailures` names exactly the checks that find one, with no browser.
@@ -127,8 +130,15 @@ same site and never to an address `UNSAFE_LINK` matches
   another site each skip the operation.
 - **Required path and query parameters take the document's own values**: the parameter's
   `example`, then its schema's `example`, `default` and first `enum` value. Optional parameters are
-  left out. A required parameter with no such value, and a required header or cookie parameter,
-  skip the operation.
+  left out. A required query parameter with no such value, and a required header or cookie
+  parameter, skip the operation.
+- **A path parameter with no such value takes one from a list.** The runner reads the answer of the
+  list operation one level up (`GET /books/{bookId}/reviews` for `reviewId` in
+  `/books/{bookId}/reviews/{reviewId}`), when the run requests that operation anyway at that very
+  address, and takes its first item's property named as the parameter, else its `id`
+  ([`e2e/planApiOperationsWithListedValues.ts`](../e2e/planApiOperationsWithListedValues.ts)).
+  Nested parameters are filled outermost first, and the run says which value it took. An operation
+  with no such list, or whose list answers with no value, is skipped with the reason.
 - **No credentials, even ones the document offers.** A required query parameter that one of the
   document's `apiKey` security schemes names skips the operation, whatever example it carries.
 - **An address `UNSAFE_LINK` matches is never requested** (`logout`, `delete` and the like), as in

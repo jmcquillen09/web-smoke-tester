@@ -7,11 +7,12 @@ import { demoApi } from '../demo/demoApi.ts'
 import { ApiCheck } from '../e2e/ApiCheck.ts'
 import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
+import { fetchApiList } from '../e2e/fetchApiList.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
 import { findApiContentTypeProblems } from '../e2e/fixtures/findApiContentTypeProblems.ts'
 import { findApiStatusProblems } from '../e2e/fixtures/findApiStatusProblems.ts'
 import { requestApiOperation } from '../e2e/fixtures/requestApiOperation.ts'
-import { planApiOperations } from '../e2e/planApiOperations.ts'
+import { planApiOperationsWithListedValues } from '../e2e/planApiOperationsWithListedValues.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
@@ -21,17 +22,21 @@ import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
 const withDemoApi = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
   withRunningDemoServer(demoApi, work)
 
-const planDemoApi = async (baseUrl: string) => {
-  const discovered = await withSiteRequest({ ignoreHttpsErrors: false }, (siteRequest) =>
-    discoverOpenApiDocument(
+const planDemoApi = (baseUrl: string) =>
+  withSiteRequest({ ignoreHttpsErrors: false }, async (siteRequest) => {
+    const discovered = await discoverOpenApiDocument(
       { target: 'demo-api', baseUrl, apiSpecPaths: OPENAPI_DOCUMENT_PATHS },
       (url) => fetchOpenApiDocument(siteRequest, url)
     )
-  )
-  return planApiOperations(discovered.document, discovered.url)
-}
+    const { plan } = await planApiOperationsWithListedValues(
+      discovered.document,
+      discovered.url,
+      (url) => fetchApiList(siteRequest, url)
+    )
+    return plan
+  })
 
-void test('an API run finds the demo API’s document and skips what it cannot request', async () => {
+void test('an API run plans the demo API’s operations, one with a listed value, and skips the unsafe one', async () => {
   await withDemoApi(async (baseUrl) => {
     const plan = await planDemoApi(baseUrl)
 
@@ -41,6 +46,8 @@ void test('an API run finds the demo API’s document and skips what it cannot r
         '/api/books',
         '/api/books/search?q=tide',
         '/api/books/1',
+        '/api/books/1/reviews',
+        '/api/books/1/reviews/7',
         '/api/authors',
         '/api/authors/1',
         '/api/stats',
@@ -48,10 +55,6 @@ void test('an API run finds the demo API’s document and skips what it cannot r
       ]
     )
     assert.deepEqual(plan.skipped, [
-      {
-        path: '/books/{bookId}/reviews/{reviewId}',
-        reason: 'the document gives no example value for its path parameter "reviewId"'
-      },
       { path: '/session/logout', reason: 'its path suggests it ends a session or changes data' }
     ])
   })
@@ -78,6 +81,8 @@ void test('the checks find each bug seeded in the demo API, and nothing else', a
       '/books': [],
       '/books/search': [],
       '/books/{bookId}': [],
+      '/books/{bookId}/reviews': [],
+      '/books/{bookId}/reviews/{reviewId}': [],
       '/authors': ['answered HTTP 200 as text/html; the document declares application/json'],
       '/authors/{authorId}': ['answered HTTP 500, a server error'],
       '/stats': ['answered HTTP 202, which the document does not declare (declared: 200)'],
