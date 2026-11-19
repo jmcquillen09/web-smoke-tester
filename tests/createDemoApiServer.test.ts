@@ -4,8 +4,9 @@ import test from 'node:test'
 
 import { request } from '@playwright/test'
 import { DEMO_API_HOST, DEMO_API_PORT } from '../demo/constants.ts'
-import { startDemoApiServer } from '../demo/startDemoApiServer.ts'
-import { stopDemoApiServer } from '../demo/stopDemoApiServer.ts'
+import { demoApi } from '../demo/demoApi.ts'
+import { startDemoServer } from '../demo/startDemoServer.ts'
+import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { ApiCheck } from '../e2e/ApiCheck.ts'
 import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
@@ -21,12 +22,12 @@ import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 
 // Serves the demo API on a free port for one test and hands it the API's address.
 const withDemoApi = async (work: (baseUrl: string) => Promise<void>): Promise<void> => {
-  const server = await startDemoApiServer(0, '127.0.0.1')
+  const server = await startDemoServer(demoApi, 0, '127.0.0.1')
   const { port } = server.address() as AddressInfo
   try {
     await work(`http://127.0.0.1:${String(port)}`)
   } finally {
-    await stopDemoApiServer(server)
+    await stopDemoServer(demoApi, server)
   }
 }
 

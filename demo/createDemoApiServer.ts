@@ -1,13 +1,9 @@
 import { readFileSync } from 'node:fs'
-import { createServer, type Server } from 'node:http'
+import type { Server } from 'node:http'
 import path from 'node:path'
 import { DEMO_OPENAPI_FILE } from './constants.ts'
-
-interface DemoAnswer {
-  readonly status: number
-  readonly contentType: string
-  readonly body: string
-}
+import { createFixedAnswerServer } from './createFixedAnswerServer.ts'
+import type { DemoAnswer } from './DemoAnswer.ts'
 
 const JSON_TYPE = 'application/json; charset=utf-8'
 const HTML_TYPE = 'text/html; charset=utf-8'
@@ -53,20 +49,7 @@ const ANSWERS: Readonly<Record<string, DemoAnswer>> = {
   '/api/account': json(401, { error: 'Sign in to read your account.' })
 }
 
-const READ_METHODS: readonly string[] = ['GET', 'HEAD']
-
 // The demo library API: fixed data, read-only, and no state between requests, so every run against
 // it gets the same answers. The caller chooses the port with `listen`.
 export const createDemoApiServer = (): Server =>
-  createServer((request, response) => {
-    const isReadRequest = READ_METHODS.includes(request.method ?? '')
-    const { pathname } = new URL(request.url ?? '/', 'http://demo-api.invalid')
-    const hasAnswer = Object.hasOwn(ANSWERS, pathname)
-    const known = hasAnswer ? ANSWERS[pathname] : undefined
-    const isHeadRequest = request.method === 'HEAD'
-    const answer = isReadRequest
-      ? (known ?? NOT_FOUND)
-      : json(405, { error: 'The demo API is read-only.' })
-    response.writeHead(answer.status, { 'content-type': answer.contentType })
-    response.end(isHeadRequest ? undefined : answer.body)
-  })
+  createFixedAnswerServer(ANSWERS, NOT_FOUND, json(405, { error: 'The demo API is read-only.' }))

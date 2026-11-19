@@ -4,8 +4,9 @@ import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import test from 'node:test'
 
-import { startDemoApiServer } from '../demo/startDemoApiServer.ts'
-import { stopDemoApiServer } from '../demo/stopDemoApiServer.ts'
+import { demoApi } from '../demo/demoApi.ts'
+import { startDemoServer } from '../demo/startDemoServer.ts'
+import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
@@ -14,9 +15,9 @@ const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runApiPlaywright
 
 // A port nothing listens on: one the system just handed out and took back.
 const freePort = async (): Promise<number> => {
-  const server = await startDemoApiServer(0, HOST)
+  const server = await startDemoServer(demoApi, 0, HOST)
   const { port } = server.address() as AddressInfo
-  await stopDemoApiServer(server)
+  await stopDemoServer(demoApi, server)
   return port
 }
 
@@ -56,12 +57,12 @@ void test('a run that stops before its tests start still shuts the demo API down
   assert.match(run.output, /the demo API is running at/)
   assert.match(run.output, /expects a failure on GET \/no-such-operation/)
   assert.match(run.output, /the demo API has shut down/)
-  const next = await startDemoApiServer(port, HOST)
-  await stopDemoApiServer(next)
+  const next = await startDemoServer(demoApi, port, HOST)
+  await stopDemoServer(demoApi, next)
 })
 
 void test('a run whose port is taken stops with the reason and leaves the portâ€™s holder running', async () => {
-  const holder = await startDemoApiServer(0, HOST)
+  const holder = await startDemoServer(demoApi, 0, HOST)
   const { port } = holder.address() as AddressInfo
   const targetsFile = writeTargetsFile(
     JSON.stringify({
@@ -76,6 +77,6 @@ void test('a run whose port is taken stops with the reason and leaves the portâ€
     assert.doesNotMatch(run.output, /the demo API is running at/)
     assert.equal(holder.listening, true)
   } finally {
-    await stopDemoApiServer(holder)
+    await stopDemoServer(demoApi, holder)
   }
 })
