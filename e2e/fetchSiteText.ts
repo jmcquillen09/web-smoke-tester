@@ -3,9 +3,9 @@ import {
   CRAWL_FETCH_TIMEOUT_MS,
   FETCH_REDIRECT_LIMIT,
   HTTP_ERROR_STATUS,
-  HTTP_FIRST_REDIRECT_STATUS,
-  UNSAFE_LINK
+  HTTP_FIRST_REDIRECT_STATUS
 } from './constants.ts'
+import { isSafeAddress } from './isSafeAddress.ts'
 
 // The body `url` answers with, and the address that answered, when the answer is OK and of a wanted
 // content type. A redirect is followed only on the same site, never to an `UNSAFE_LINK` address.
@@ -36,8 +36,7 @@ export const fetchSiteText = async (
           return isWanted ? { url: address, text: await response.text() } : undefined
         }
         const next = new URL(location, address)
-        const isFollowable =
-          next.origin === origin && !UNSAFE_LINK.test(`${next.pathname}${next.search}`)
+        const isFollowable = next.origin === origin && isSafeAddress(next)
         if (!isFollowable) return undefined
         address = next.href
       } finally {

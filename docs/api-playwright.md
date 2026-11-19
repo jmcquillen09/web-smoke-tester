@@ -129,8 +129,8 @@ same site and never to an address `UNSAFE_LINK` matches
 - **An address `UNSAFE_LINK` matches is never requested** (`logout`, `delete` and the like), as in
   every other check. The path is judged as the document writes it and again as the address a run
   would request, with its server prefix and example values filled in.
-- **`$ref` is followed for parameters and responses** under the document's `components`; any other
-  `$ref` there skips the operation.
+- **`$ref` is followed for parameters and responses** to a definition under the document's
+  `components`; one that points anywhere else, or at another `$ref`, skips the operation.
 
 The runner hands the planned operations to Playwright as `E2E_API_OPERATIONS`. A run started
 without the runner has none, so the API specs write no tests.

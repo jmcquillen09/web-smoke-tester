@@ -170,6 +170,14 @@ void test('an OpenAPI document path cannot name another site through URL normali
   }
 })
 
+void test('an OpenAPI document path is judged for safety as a URL reads it', () => {
+  const targets = targetsWith({
+    staging: { baseUrl: 'https://staging.example.com', apiSpecPath: '/session/log\tout' }
+  })
+
+  assert.throws(() => resolveE2eTarget('staging', targets), { name: 'E2eConfigurationError' })
+})
+
 void test('an OpenAPI document path a read-only run may not request is refused', () => {
   const targets = targetsWith({
     staging: { baseUrl: 'https://staging.example.com', apiSpecPath: '/session/logout' }

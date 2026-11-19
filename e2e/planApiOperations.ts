@@ -1,5 +1,6 @@
 import type { ApiOperation } from './ApiOperation.ts'
 import { API_OPERATION_LIMIT, UNSAFE_LINK } from './constants.ts'
+import { isSafeAddress } from './isSafeAddress.ts'
 import { isSitePath } from './isSitePath.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
 
@@ -22,8 +23,17 @@ type Planned<T> = PlannedValue<T> | SkippedValue
 type OpenApiPathItem = OpenApiDocument['paths'][string]
 type OpenApiOperation = NonNullable<OpenApiPathItem['get']>
 type OpenApiComponents = NonNullable<OpenApiDocument['components']>
-type OpenApiParameter = NonNullable<OpenApiComponents['parameters']>[string]
-type OpenApiResponse = NonNullable<OpenApiComponents['responses']>[string]
+interface OpenApiReference {
+  readonly $ref: string
+}
+type OpenApiParameter = Exclude<
+  NonNullable<OpenApiComponents['parameters']>[string],
+  OpenApiReference
+>
+type OpenApiResponse = Exclude<
+  NonNullable<OpenApiComponents['responses']>[string],
+  OpenApiReference
+>
 type OpenApiServers = OpenApiDocument['servers']
 
 const PARAMETER_REFERENCE = '#/components/parameters/'
@@ -34,18 +44,21 @@ const API_KEY_SCHEME = 'apiKey'
 const planned = <T>(value: T): Planned<T> => ({ kind: 'planned', value })
 const skipped = (reason: string): SkippedValue => ({ kind: 'skipped', reason })
 const isPlanned = <T>(plan: Planned<T>): plan is PlannedValue<T> => plan.kind === 'planned'
-const isReference = (entry: object): entry is { readonly $ref: string } => '$ref' in entry
+const isReference = (entry: object): entry is OpenApiReference => '$ref' in entry
 
-// The component a `$ref` names, or undefined when it points anywhere but that components section.
-const resolveComponent = <T>(
+// The definition a `$ref` names in one components section; undefined when it names none there, or
+// names another `$ref`.
+const resolveComponent = <T extends object>(
   reference: string,
   prefix: string,
-  components: Readonly<Record<string, T>> = {}
+  components: Readonly<Record<string, T | OpenApiReference>> = {}
 ): T | undefined => {
   const hasPrefix = reference.startsWith(prefix)
   const name = hasPrefix ? reference.slice(prefix.length) : ''
   const hasComponent = Object.hasOwn(components, name)
-  return hasComponent ? components[name] : undefined
+  const component = hasComponent ? components[name] : undefined
+  const isDefinition = component !== undefined && !isReference(component)
+  return isDefinition ? component : undefined
 }
 
 // The server an operation is requested on: the first of the servers that apply to it.
@@ -72,10 +85,17 @@ const planParameters = (
   const parameters = new Map<string, OpenApiParameter>()
   for (const entry of [...(item.parameters ?? []), ...(operation.parameters ?? [])]) {
     const parameter = isReference(entry)
-      ? resolveComponent(entry.$ref, PARAMETER_REFERENCE, document.components?.parameters)
+      ? resolveComponent<OpenApiParameter>(
+          entry.$ref,
+          PARAMETER_REFERENCE,
+          document.components?.parameters
+        )
       : entry
     const isResolved = parameter !== undefined
-    if (!isResolved) return skipped("it has a parameter $ref outside the document's components")
+    if (!isResolved)
+      return skipped(
+        "it has a parameter $ref that names no definition in the document's components"
+      )
     parameters.set(`${parameter.in}:${parameter.name}`, parameter)
   }
   return planned([...parameters.values()])
@@ -135,8 +155,8 @@ const planUrl = (
   url.search = query.toString()
   const isServerSite = url.origin === server.origin
   if (!isServerSite) return skipped(`its address ${url.href} is on another site than its server`)
-  const isSafeAddress = !UNSAFE_LINK.test(`${url.pathname}${url.search}`)
-  if (!isSafeAddress) return skipped('its address suggests it ends a session or changes data')
+  const hasSafeAddress = isSafeAddress(url)
+  if (!hasSafeAddress) return skipped('its address suggests it ends a session or changes data')
   return planned(url.href)
 }
 
@@ -147,10 +167,15 @@ const planResponses = (
   const responses: ApiOperation['responses'] = []
   for (const [status, entry] of Object.entries(operation.responses ?? {})) {
     const response: OpenApiResponse | undefined = isReference(entry)
-      ? resolveComponent(entry.$ref, RESPONSE_REFERENCE, document.components?.responses)
+      ? resolveComponent<OpenApiResponse>(
+          entry.$ref,
+          RESPONSE_REFERENCE,
+          document.components?.responses
+        )
       : entry
     const isResolved = response !== undefined
-    if (!isResolved) return skipped("it has a response $ref outside the document's components")
+    if (!isResolved)
+      return skipped("it has a response $ref that names no definition in the document's components")
     responses.push({ status, contentTypes: Object.keys(response.content ?? {}) })
   }
   return planned(responses)

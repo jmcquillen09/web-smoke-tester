@@ -108,6 +108,30 @@ void test('parameters and responses given by $ref come from the document’s com
   ])
 })
 
+void test('a $ref to a component that is itself a $ref skips the operation', () => {
+  const document = documentWith(
+    { '/pets': { get: { responses: { '200': { $ref: '#/components/responses/Alias' } } } } },
+    {
+      components: {
+        responses: {
+          Alias: { $ref: '#/components/responses/Pets' },
+          Pets: { content: { 'application/json': {} } }
+        }
+      }
+    }
+  )
+
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL), {
+    operations: [],
+    skipped: [
+      {
+        path: '/pets',
+        reason: "it has a response $ref that names no definition in the document's components"
+      }
+    ]
+  })
+})
+
 void test('an operation is secured by its own requirement or the document’s', () => {
   const document = documentWith(
     {
@@ -155,7 +179,10 @@ void test('an operation a run cannot request safely is skipped with the reason',
         reason: 'its path has a placeholder the document declares no parameter for'
       },
       { path: '/me', reason: 'it requires the header parameter "X-Token"' },
-      { path: '/refs', reason: "it has a parameter $ref outside the document's components" }
+      {
+        path: '/refs',
+        reason: "it has a parameter $ref that names no definition in the document's components"
+      }
     ]
   })
 })

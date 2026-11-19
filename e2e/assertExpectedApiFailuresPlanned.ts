@@ -12,8 +12,8 @@ export const assertExpectedApiFailuresPlanned = (
   const unplanned = settings.expectedApiFailures
     .map((expected) => expected.path)
     .filter((path) => !plannedPaths.includes(path))
-  const hasUnplanned = unplanned.length > 0
-  if (hasUnplanned) {
+  const areAllPlanned = unplanned.length === 0
+  if (!areAllPlanned) {
     throw new E2eConfigurationError(
       `The ${settings.target} target expects a failure on ${[...new Set(unplanned)].map((path) => `GET ${path}`).join(', ')}, which this run does not request. Requested: ${plannedPaths.map((path) => `GET ${path}`).join(', ')}.`
     )

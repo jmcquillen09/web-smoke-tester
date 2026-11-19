@@ -1,6 +1,7 @@
-import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS, UNSAFE_LINK } from './constants.ts'
+import { DEFAULT_CRAWL_LIMIT, OPENAPI_DOCUMENT_PATHS } from './constants.ts'
 import { assertRunnableTarget } from './assertRunnableTarget.ts'
 import type { E2eTargetSettings } from './E2eTargetSettings.ts'
+import { isSafeAddress } from './isSafeAddress.ts'
 import { isSitePath } from './isSitePath.ts'
 import type { E2eTargetsFile } from './E2eTargetsFile.ts'
 import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
@@ -41,9 +42,9 @@ const assertSitePath = (name: string, path: string): void => {
 }
 
 // A run requests the document's address, so it must be one a read-only run may request.
-const assertSafeApiSpecPath = (name: string, path: string): void => {
-  const isSafePath = !UNSAFE_LINK.test(path)
-  if (!isSafePath) {
+const assertSafeApiSpecPath = (name: string, path: string, siteUrl: URL): void => {
+  const hasSafeAddress = isSafeAddress(new URL(path, siteUrl))
+  if (!hasSafeAddress) {
     throw new E2eConfigurationError(
       `The ${name} target's apiSpecPath "${path}" looks like an address that ends a session or changes data, which a run never requests.`
     )
@@ -73,7 +74,7 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     definition.apiSpecPath === undefined ? OPENAPI_DOCUMENT_PATHS : [definition.apiSpecPath]
   for (const path of apiSpecPaths) {
     assertSitePath(name, path)
-    assertSafeApiSpecPath(name, path)
+    assertSafeApiSpecPath(name, path, siteUrl)
   }
   const servesDemoApi = definition.servesDemoApi ?? false
   if (servesDemoApi) assertDemoApiUrl(name, siteUrl)

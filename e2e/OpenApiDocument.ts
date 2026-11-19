@@ -58,8 +58,12 @@ export const OpenApiDocumentSchema = z.object({
   paths: z.record(z.string(), OpenApiPathItemSchema),
   components: z
     .object({
-      parameters: z.record(z.string(), OpenApiParameterSchema).optional(),
-      responses: z.record(z.string(), OpenApiResponseSchema).optional(),
+      parameters: z
+        .record(z.string(), z.union([OpenApiReferenceSchema, OpenApiParameterSchema]))
+        .optional(),
+      responses: z
+        .record(z.string(), z.union([OpenApiReferenceSchema, OpenApiResponseSchema]))
+        .optional(),
       /** How a request proves who sends it; an `apiKey` scheme names the parameter carrying the key. */
       securitySchemes: z
         .record(
