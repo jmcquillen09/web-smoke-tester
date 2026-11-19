@@ -20,10 +20,37 @@ npm run test:api-playwright petstore    # the target named "petstore"
 Arguments after the target pass to `playwright test`, as in the site suite:
 `npm run test:api-playwright -- petstore -g "/pet"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
-site suite's do. Exit codes: `0` every test passed; `1` a test failed, the site offers no document,
-or the document has no operation a run can request; `2` the run was refused before it started.
+site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site offers no
+document, the document has no operation a run can request, or an expected failure names an
+operation the run does not request; `2` the run was refused before it started.
 
 Only test APIs you own or have permission to test.
+
+## Expected failures
+
+A target lists the checks known to fail on its API in `expectedApiFailures`, each an operation's
+path as the document writes it and the check (`status` or `contentType`):
+
+```json
+"expectedApiFailures": [
+  { "path": "/authors/{authorId}", "check": "status" },
+  { "path": "/stats", "check": "status" }
+]
+```
+
+Each named test is marked with Playwright's
+[`test.fail`](https://playwright.dev/docs/api/class-test#test-fail): the check still runs, and
+
+- **while it fails**, the report shows it as an expected failure, with the finding, and it does not
+  fail the run;
+- **once it passes**, the test fails with "Expected to fail, but passed", so a fixed defect is
+  taken off the list rather than left there;
+- **every other test is unaffected**, so a new finding still fails the run.
+
+An expected failure fails for any reason, including an operation that never answers. An entry
+whose path the run does not request (a misspelled path, an operation the document dropped) stops
+the run before any test starts
+([`e2e/assertExpectedApiFailuresPlanned.ts`](../e2e/assertExpectedApiFailuresPlanned.ts)).
 
 ## Finding the document
 

@@ -20,7 +20,8 @@ void test('a target with only a base URL tests its start page and crawls by defa
     crawlLimit: 10,
     ignoreHttpsErrors: false,
     blockTracking: true,
-    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS]
+    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
+    expectedApiFailures: []
   })
 })
 
@@ -50,7 +51,8 @@ void test('a target keeps the paths, crawl limit and certificate setting it name
     crawlLimit: 0,
     ignoreHttpsErrors: true,
     blockTracking: true,
-    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS]
+    apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
+    expectedApiFailures: []
   })
 })
 
@@ -150,4 +152,17 @@ void test('an OpenAPI document path must start from the root of the site', () =>
   assert.throws(() => resolveE2eTarget('staging', targets), {
     name: 'E2eConfigurationError'
   })
+})
+
+void test('a target keeps the API checks it expects to fail', () => {
+  const targets = targetsWith({
+    staging: {
+      baseUrl: 'https://staging.example.com',
+      expectedApiFailures: [{ path: '/stats', check: 'status' }]
+    }
+  })
+
+  assert.deepEqual(resolveE2eTarget('staging', targets).expectedApiFailures, [
+    { path: '/stats', check: 'status' }
+  ])
 })

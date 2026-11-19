@@ -4,6 +4,7 @@
 
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { assertExpectedApiFailuresPlanned } from '../e2e/assertExpectedApiFailuresPlanned.ts'
 import { API_OPERATIONS_VARIABLE, API_PROJECT, TARGET_VARIABLE } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
@@ -39,6 +40,7 @@ try {
     console.error(`${COMMAND}: the document has no GET operation a run can request.`)
     process.exit(1)
   }
+  assertExpectedApiFailuresPlanned(settings, plan.operations)
   const outcome = await spawnChild(
     process.execPath,
     [playwrightCli, 'test', `--project=${API_PROJECT}`, ...playwrightArgs],

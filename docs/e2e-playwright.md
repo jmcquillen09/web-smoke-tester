@@ -55,17 +55,18 @@ A target is a named site. [`targets.json`](../targets.json) at the repo root hol
 }
 ```
 
-| Setting             | Required | Default                                | Meaning                                                                                                                                                    |
-| ------------------- | -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultTarget`     | yes      |                                        | The target a run without a name uses.                                                                                                                      |
-| `baseUrl`           | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                  |
-| `paths`             | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                            |
-| `crawlLimit`        | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                               |
-| `ignoreHttpsErrors` | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                |
-| `blockTracking`     | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
-| `viewport`          | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
-| `apiSpecPath`       | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.      |
-| `disabled`          | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
+| Setting               | Required | Default                                | Meaning                                                                                                                                                    |
+| --------------------- | -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultTarget`       | yes      |                                        | The target a run without a name uses.                                                                                                                      |
+| `baseUrl`             | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                  |
+| `paths`               | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                            |
+| `crawlLimit`          | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                               |
+| `ignoreHttpsErrors`   | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                |
+| `blockTracking`       | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
+| `viewport`            | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
+| `apiSpecPath`         | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.      |
+| `expectedApiFailures` | no       | none                                   | The API checks known to fail on this site, each `{ "path": "/stats", "check": "status" }`. See [Expected failures](api-playwright.md#expected-failures).   |
+| `disabled`            | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
 
 A misspelled setting, a missing `baseUrl`, a path that does not start with `/` and an unknown target
 name each stop the run and say what is wrong. `E2E_TARGETS_FILE` points a run at another file, for

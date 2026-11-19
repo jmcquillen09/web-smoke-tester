@@ -43,6 +43,9 @@ export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
   '/api/openapi.json',
   '/swagger/v1/swagger.json'
 ]
+// What the report shows on an API test the target's `expectedApiFailures` names.
+export const EXPECTED_API_FAILURE =
+  'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'
 // The most operations one API run requests.
 export const API_OPERATION_LIMIT = 50
 

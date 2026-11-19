@@ -1,3 +1,5 @@
+import type { ApiCheck } from './ApiCheck.ts'
+
 // What a run knows about the site it tests, resolved from the target's entry in targets.json.
 export interface E2eTargetSettings {
   /** The target's name in targets.json. */
@@ -13,6 +15,8 @@ export interface E2eTargetSettings {
   readonly blockTracking: boolean
   /** Where an API run looks for the site's OpenAPI document, in order, as paths from the site's root. */
   readonly apiSpecPaths: readonly string[]
+  /** The API checks known to fail on this site: reported as expected failures, and a failed run once one passes. */
+  readonly expectedApiFailures: readonly { readonly path: string; readonly check: ApiCheck }[]
   /** The desktop browser window's size; absent for the browser's own default. */
   readonly viewport?: { readonly width: number; readonly height: number }
 }

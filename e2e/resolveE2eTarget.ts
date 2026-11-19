@@ -57,6 +57,7 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     ignoreHttpsErrors: definition.ignoreHttpsErrors ?? false,
     blockTracking: definition.blockTracking ?? true,
     apiSpecPaths: [...apiSpecPaths],
+    expectedApiFailures: definition.expectedApiFailures ?? [],
     ...(definition.viewport === undefined ? {} : { viewport: definition.viewport })
   }
 }
