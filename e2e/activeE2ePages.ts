@@ -5,7 +5,7 @@ import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
 
 const SitePagesSchema = z.array(z.string().startsWith('/')).min(1)
 
-// The pages this run tests, one test per page per check. scripts/runE2ePlaywright.ts hands over the
+// The pages this run tests, one test per page per check. The runner (e2e/planWebRun.ts) hands over the
 // target's own paths plus the pages its crawl found; a run started without it (the VS Code
 // Playwright extension) tests the target's own paths.
 export const activeE2ePages = (

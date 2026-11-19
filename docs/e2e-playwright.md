@@ -10,9 +10,21 @@ test a site's API from its OpenAPI document; see [`api-playwright.md`](api-playw
 
 ```bash
 npx playwright install chromium            # once per machine; add firefox webkit for those browsers
-npm run test:e2e-playwright                # the defaultTarget in targets.json
+npm run test:e2e-playwright                # the defaultTarget in targets.json: the bundled demo site
 npm run test:e2e-playwright staging        # the target named "staging"
 ```
+
+Three commands run the tests, each against a target:
+
+| Command                                | Runs                                                             |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `npm run test:e2e-playwright [target]` | the web tests and the [API tests](api-playwright.md), in one run |
+| `npm run test:web-playwright [target]` | the web tests only                                               |
+| `npm run test:api-playwright [target]` | the API tests only                                               |
+
+`test:e2e-playwright` looks for the site's OpenAPI document as an API run does. A site that
+publishes none, or one with no operation a run can request, is told so in the same words, and the
+run goes on with the web tests alone: a missing document does not fail it.
 
 Arguments after the target pass straight to `playwright test`, for example
 `npm run test:e2e-playwright -- staging e2e/brokenLinks.spec.ts --headed` or
@@ -28,9 +40,39 @@ record the run's target, the site it resolved to (`site`) and its browsers, plus
 needs its own folders uses Playwright's switches: `--output <dir>` for traces and screenshots,
 `PLAYWRIGHT_HTML_OUTPUT_DIR` and `PLAYWRIGHT_JSON_OUTPUT_FILE` for the reports.
 
-Exit codes: `0` every test passed, `1` a test failed or the site did not answer, `2` the run was
-refused before it started (an unknown target or browser, a disabled target, a malformed targets
+Exit codes: `0` every test passed (or failed as its target expects), `1` a test failed or the
+site did not answer, `2` the run was refused before it started (an unknown target or browser, a disabled target, a malformed targets
 file).
+
+## The demo site
+
+The repo bundles a small site to run the checks against, under [`demo/`](../demo): three fixed
+pages that link to one another, a stylesheet and two images
+([`demo/createDemoSiteServer.ts`](../demo/createDemoSiteServer.ts)). Every check passes on it, and
+it is the `defaultTarget`, so a run without a target name needs no site of your own. It also
+serves the [demo API](api-playwright.md#the-demo-api) and its OpenAPI document at `/openapi.json`,
+so an API run against it works too.
+
+```bash
+npm run test:e2e-playwright demo-site
+```
+
+The `demo-site` target sets `servesDemoSite`, so the one command does the whole run
+([`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts)):
+
+1. It starts the demo site at the target's address and waits until it is listening.
+2. It finds the site's pages and its API's operations, and runs the tests.
+3. It stops the demo site, whether the tests passed, failed or never started, and waits until the
+   site no longer listens and every connection to it has ended. Only then does the command exit.
+
+[`demo/withTargetDemoServer.ts`](../demo/withTargetDemoServer.ts) holds those steps for both
+runners and both demo servers: a site run and an API run each serve the one their target names. The run prints
+`the demo site is running at …` and `the demo site has shut down` around the tests. A port
+something else holds stops the run with the reason before any test starts.
+A run started without a runner, as an IDE's Playwright extension starts one, has Playwright serve
+the demo server itself ([`e2e/createDemoWebServers.ts`](../e2e/createDemoWebServers.ts)).
+`npm run serve:demo-site` serves the same site until stopped, to look at it by hand; stop it before
+a run against `demo-site`, which needs the port.
 
 ## Targets
 
@@ -55,19 +97,20 @@ A target is a named site. [`targets.json`](../targets.json) at the repo root hol
 }
 ```
 
-| Setting               | Required | Default                                | Meaning                                                                                                                                                    |
-| --------------------- | -------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defaultTarget`       | yes      |                                        | The target a run without a name uses.                                                                                                                      |
-| `baseUrl`             | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                  |
-| `paths`               | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                            |
-| `crawlLimit`          | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                               |
-| `ignoreHttpsErrors`   | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                |
-| `blockTracking`       | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics. |
-| `viewport`            | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                |
-| `apiSpecPath`         | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.      |
-| `servesDemoApi`       | no       | `false`                                | Have an [API run](api-playwright.md) serve the bundled demo API at `baseUrl` for the length of the run. `baseUrl` must then be `http://localhost:<port>`.  |
-| `expectedApiFailures` | no       | none                                   | The API checks known to fail on this site, each `{ "path": "/stats", "check": "status" }`. See [Expected failures](api-playwright.md#expected-failures).   |
-| `disabled`            | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                            |
+| Setting               | Required | Default                                | Meaning                                                                                                                                                                                                                         |
+| --------------------- | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultTarget`       | yes      |                                        | The target a run without a name uses.                                                                                                                                                                                           |
+| `baseUrl`             | yes      |                                        | The site's address, `http` or `https`. A path on it (`https://example.com/docs/`) becomes the start page.                                                                                                                       |
+| `paths`               | no       | the base URL's path                    | The pages every run tests, each a path from the site's root (`/pricing`). The first is the start page for the navigation tests.                                                                                                 |
+| `crawlLimit`          | no       | `10`                                   | How many more pages the runner may add by following same-site links. `0` tests only `paths`.                                                                                                                                    |
+| `ignoreHttpsErrors`   | no       | `false`                                | Accept a self-signed or otherwise invalid certificate, as a local or staging site may have.                                                                                                                                     |
+| `blockTracking`       | no       | `true`                                 | Keep analytics and marketing scripts from loading. `false` lets them load, as in a visitor's browser, at the cost of test traffic in the site's analytics.                                                                      |
+| `viewport`            | no       | the browser's own (1280×720 in Chrome) | The desktop window's size, as `{ "width": 1920, "height": 1080 }`. The phone and tablet layout checks keep their own sizes.                                                                                                     |
+| `apiSpecPath`         | no       | the usual addresses, tried in order    | Where the site's OpenAPI 3 JSON document is, as a path from the site's root (`/api/v3/openapi.json`). Only the [API run](api-playwright.md) reads it.                                                                           |
+| `servesDemoApi`       | no       | `false`                                | Have a run serve the bundled [demo API](api-playwright.md#the-demo-api) at `baseUrl` for the length of the run. `baseUrl` must then be `http://localhost:<port>`.                                                               |
+| `servesDemoSite`      | no       | `false`                                | Have a run serve the bundled [demo site](#the-demo-site), its pages and the demo API, at `baseUrl` for the length of the run. `baseUrl` must then be `http://localhost:<port>`, and the target cannot also set `servesDemoApi`. |
+| `expectedApiFailures` | no       | none                                   | The API checks known to fail on this site, each `{ "path": "/stats", "check": "status" }`. See [Expected failures](api-playwright.md#expected-failures).                                                                        |
+| `disabled`            | no       |                                        | A reason. While it is set, every run against the target stops with that reason.                                                                                                                                                 |
 
 A misspelled setting, a missing `baseUrl`, a path that does not start with `/` and an unknown target
 name each stop the run and say what is wrong. `E2E_TARGETS_FILE` points a run at another file, for
@@ -219,13 +262,23 @@ patterns) live in [`e2e/constants.ts`](../e2e/constants.ts).
 
 ## How a run is put together
 
-1. [`scripts/runE2ePlaywright.ts`](../scripts/runE2ePlaywright.ts) takes `--browser` and the target
-   out of the arguments, resolves the target from `targets.json`, and finds the site's pages.
-2. It starts `playwright test` with `E2E_TARGET`, `E2E_BROWSER` and `E2E_SITE_PAGES` set.
+1. The command's script under [`scripts/`](../scripts) (`runE2ePlaywright.ts`,
+   `runWebPlaywright.ts` or `runApiPlaywright.ts`) takes the target out of the arguments and
+   resolves it from `targets.json`. The first two also take `--browser`; an API run opens no
+   browser and passes every other argument on.
+2. [`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts) serves the demo server the
+   target names, checks that the site answers, and has the command find what to test: the site's
+   pages ([`e2e/planWebRun.ts`](../e2e/planWebRun.ts)), its API's operations
+   ([`e2e/planApiRun.ts`](../e2e/planApiRun.ts)), or both. It then starts `playwright test` with
+   `E2E_TARGET` set, and with what the command found: `E2E_BROWSER` and `E2E_SITE_PAGES` for the
+   web tests, `E2E_API_OPERATIONS` for the API tests. A web-only run hands over no operations, and
+   an API-only run names only the `api` project.
 3. [`playwright.config.ts`](../playwright.config.ts) resolves the same target and browsers through
    the same functions, and builds the projects.
-4. [`e2e/globalSetup.ts`](../e2e/globalSetup.ts) asks the site for its start page once. A site that
-   does not answer at all stops the run there with one reason, instead of a timeout in every test.
+4. [`e2e/globalSetup.ts`](../e2e/globalSetup.ts) asks the site for its start page once
+   ([`e2e/assertSiteAnswers.ts`](../e2e/assertSiteAnswers.ts)). A site that does not answer at all
+   stops the run there with one reason, instead of a timeout in every test; a certificate the run
+   does not accept is named, with the `ignoreHttpsErrors` setting that accepts it.
 5. Each spec writes one test per page from [`e2e/sitePages.ts`](../e2e/sitePages.ts).
 
 ## Writing a spec

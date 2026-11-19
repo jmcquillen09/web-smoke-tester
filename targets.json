@@ -1,8 +1,14 @@
 {
-  "defaultTarget": "example",
+  "defaultTarget": "demo-site",
   "targets": {
-    "example": {
-      "baseUrl": "https://example.com"
+    "demo-site": {
+      "baseUrl": "http://localhost:4020",
+      "servesDemoSite": true,
+      "expectedApiFailures": [
+        { "path": "/authors", "check": "contentType" },
+        { "path": "/authors/{authorId}", "check": "status" },
+        { "path": "/stats", "check": "status" }
+      ]
     },
     "local": {
       "baseUrl": "http://localhost:3000",

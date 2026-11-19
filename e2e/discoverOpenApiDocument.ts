@@ -1,5 +1,5 @@
 import type { E2eTargetSettings } from './E2eTargetSettings.ts'
-import { E2eConfigurationError } from './errors/E2eConfigurationError.ts'
+import { E2eApiDocumentError } from './errors/E2eApiDocumentError.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
 
 export interface DiscoveredOpenApiDocument {
@@ -23,7 +23,7 @@ export const discoverOpenApiDocument = async (
     const hasDocument = discovered !== undefined
     if (hasDocument) return discovered
   }
-  throw new E2eConfigurationError(
+  throw new E2eApiDocumentError(
     `The ${settings.target} target has no OpenAPI 3 JSON document at: ${urls.join(', ')}. Set the target's "apiSpecPath" to where it is.`
   )
 }

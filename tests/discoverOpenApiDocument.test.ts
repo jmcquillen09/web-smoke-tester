@@ -73,7 +73,7 @@ void test('a site with no document at any address stops the run and lists them',
   const site = siteOf({})
 
   await assert.rejects(discoverOpenApiDocument(SETTINGS, site.fetchOpenApiDocument), {
-    name: 'E2eConfigurationError',
+    name: 'E2eApiDocumentError',
     message:
       'The staging target has no OpenAPI 3 JSON document at: https://staging.example.com/openapi.json, https://staging.example.com/v3/api-docs. Set the target\'s "apiSpecPath" to where it is.'
   })

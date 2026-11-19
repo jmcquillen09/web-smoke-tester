@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
 import { mkdtempSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import type { AddressInfo } from 'node:net'
@@ -7,8 +6,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { startDemoApiServer } from '../demo/startDemoApiServer.ts'
-import { stopDemoApiServer } from '../demo/stopDemoApiServer.ts'
+import { demoApi } from '../demo/demoApi.ts'
+import { startDemoServer } from '../demo/startDemoServer.ts'
+import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
 import {
   API_OPERATIONS_VARIABLE,
@@ -16,10 +16,10 @@ import {
   TARGET_VARIABLE,
   TARGETS_FILE_VARIABLE
 } from '../e2e/constants.ts'
+import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 
 const HOST = '127.0.0.1'
-const REPO_ROOT = path.join(import.meta.dirname, '..')
 const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/cli')
 
 // Runs the status spec on one `/stats` operation of a demo API whose target expects that check to
@@ -27,7 +27,7 @@ const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/
 const runStatusSpec = async (
   operationOf: (baseUrl: string) => Pick<ApiOperation, 'url' | 'responses'>
 ): Promise<{ code: number; output: string }> => {
-  const server = await startDemoApiServer(0, HOST)
+  const server = await startDemoServer(demoApi, 0, HOST)
   const baseUrl = `http://${HOST}:${String((server.address() as AddressInfo).port)}`
   const scratch = mkdtempSync(path.join(tmpdir(), 'api-spec-run-'))
   const targetsFile = writeTargetsFile(
@@ -43,38 +43,24 @@ const runStatusSpec = async (
     ...operationOf(baseUrl)
   }
   try {
-    return await new Promise((resolve, reject) => {
-      const child = spawn(
-        process.execPath,
-        [
-          PLAYWRIGHT_CLI,
-          'test',
-          `--project=${API_PROJECT}`,
-          '--grep=status',
-          '--reporter=list',
-          `--output=${path.join(scratch, 'results')}`
-        ],
-        {
-          cwd: REPO_ROOT,
-          env: {
-            ...process.env,
-            PLAYWRIGHT_BROWSERS_PATH: path.join(scratch, 'no-browsers'),
-            [TARGETS_FILE_VARIABLE]: targetsFile,
-            [TARGET_VARIABLE]: 'site',
-            [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
-          }
-        }
-      )
-      let output = ''
-      child.stdout.on('data', (chunk: Buffer) => (output += chunk.toString()))
-      child.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()))
-      child.on('error', reject)
-      child.on('close', (code) => {
-        resolve({ code: code ?? 1, output })
-      })
-    })
+    return await runNodeScript(
+      [
+        PLAYWRIGHT_CLI,
+        'test',
+        `--project=${API_PROJECT}`,
+        '--grep=status',
+        '--reporter=list',
+        `--output=${path.join(scratch, 'results')}`
+      ],
+      {
+        PLAYWRIGHT_BROWSERS_PATH: path.join(scratch, 'no-browsers'),
+        [TARGETS_FILE_VARIABLE]: targetsFile,
+        [TARGET_VARIABLE]: 'site',
+        [API_OPERATIONS_VARIABLE]: JSON.stringify([operation])
+      }
+    )
   } finally {
-    await stopDemoApiServer(server)
+    await stopDemoServer(demoApi, server)
   }
 }
 

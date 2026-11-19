@@ -63,8 +63,11 @@ document is found and which operations a run requests.
   }
   ```
 
-- `npm run test:e2e-playwright [target]` runs the suite against that target (the `defaultTarget`
-  when none is named); read [`docs/e2e-playwright.md`](docs/e2e-playwright.md) for every target
+- `npm run test:e2e-playwright [target]` runs the web tests and the API tests against that target
+  in one run. A site with no OpenAPI document is told so and gets its web tests alone. With no
+  target it uses the `defaultTarget`, the bundled demo site: the run starts the site, tests it and
+  shuts it down again, and every check passes.
+- `npm run test:web-playwright [target]` runs only the web tests. Read [`docs/e2e-playwright.md`](docs/e2e-playwright.md) for every target
   setting, the reports and how to add a check.
   `--browser=<chrome|firefox|safari|edge|all>` picks the browser (default chrome), or a
   comma-separated list picks several. Workflow specs under `e2e/workflows/` run only after every
@@ -72,8 +75,8 @@ document is found and which operations a run requests.
   alone.
 - The HTML report lands in `playwright-report/` (`npx playwright show-report`), failure traces and
   screenshots in `test-results/`.
-- `npm run test:api-playwright [target]` runs the API checks against that target; it needs no
-  browser installed. To try them on
+- `npm run test:api-playwright [target]` runs only the API tests; it needs no browser installed.
+  With no target it tests the API the demo site serves. To try them on
   the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
   the tests and shuts the demo API down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
@@ -81,16 +84,19 @@ document is found and which operations a run requests.
 
 ## How it is built
 
-- [`scripts/runE2ePlaywright.ts`](scripts/runE2ePlaywright.ts) resolves the target, finds the
-  site's pages and starts Playwright.
-- [`scripts/runApiPlaywright.ts`](scripts/runApiPlaywright.ts) resolves the target, finds its
-  OpenAPI document, plans the operations to request and starts Playwright's `api` project.
+- Each command has a script under [`scripts/`](scripts) (`runE2ePlaywright.ts`,
+  `runWebPlaywright.ts`, `runApiPlaywright.ts`) that resolves the target and says what to find on
+  its site: the pages to test ([`e2e/planWebRun.ts`](e2e/planWebRun.ts)), the operations of its
+  OpenAPI document ([`e2e/planApiRun.ts`](e2e/planApiRun.ts)), or both.
+  [`e2e/runPlaywrightForTarget.ts`](e2e/runPlaywrightForTarget.ts) does the rest for all three and
+  starts Playwright.
 - Each check is a **stage** under [`e2e/stages/`](e2e/stages): a class with `setup`, `execute` and
   `teardown`. An isolated spec runs one stage on its own (`runIsolated`); a workflow spec threads
   one state through several (`runWorkflow`).
 - Each browser runs as two Playwright projects, `isolated-<browser>` and `workflows-<browser>`, the
   second gated on the first.
-- [`demo/createDemoApiServer.ts`](demo/createDemoApiServer.ts) is the bundled demo API. An API run
-  against a target that sets `servesDemoApi` starts it and shuts it down;
-  [`scripts/serveDemoApi.ts`](scripts/serveDemoApi.ts) serves it on its own.
+- [`demo/createDemoApiServer.ts`](demo/createDemoApiServer.ts) is the bundled demo API and
+  [`demo/createDemoSiteServer.ts`](demo/createDemoSiteServer.ts) the bundled demo site. A run
+  against a target that sets `servesDemoApi` or `servesDemoSite` starts the one it names and shuts
+  it down; `npm run serve:demo-api` and `npm run serve:demo-site` serve them on their own.
 - Everything is TypeScript that Node runs directly; there is no build step and no other runtime.

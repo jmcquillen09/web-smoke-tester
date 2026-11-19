@@ -21,13 +21,13 @@ const siteUrlOf = (name: string, baseUrl: string): URL => {
 
 const LOCAL_HOSTS: readonly string[] = ['localhost', '127.0.0.1']
 
-// A run can serve the demo API only at an address on this machine, on a port it can listen on.
-const assertDemoApiUrl = (name: string, siteUrl: URL): void => {
+// A run can serve a demo server only at an address on this machine, on a port it can listen on.
+const assertDemoServerUrl = (name: string, demo: string, siteUrl: URL): void => {
   const isLocalAddress =
     siteUrl.protocol === 'http:' && LOCAL_HOSTS.includes(siteUrl.hostname) && siteUrl.port !== ''
   if (!isLocalAddress) {
     throw new E2eConfigurationError(
-      `The ${name} target serves the demo API, so its baseUrl must be http://localhost:<port>; "${siteUrl.origin}" is not.`
+      `The ${name} target serves the ${demo}, so its baseUrl must be http://localhost:<port>; "${siteUrl.origin}" is not.`
     )
   }
 }
@@ -77,7 +77,15 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     assertSafeApiSpecPath(name, path, siteUrl)
   }
   const servesDemoApi = definition.servesDemoApi ?? false
-  if (servesDemoApi) assertDemoApiUrl(name, siteUrl)
+  const servesDemoSite = definition.servesDemoSite ?? false
+  const servesOneDemo = !(servesDemoApi && servesDemoSite)
+  if (!servesOneDemo) {
+    throw new E2eConfigurationError(
+      `The ${name} target sets both servesDemoApi and servesDemoSite; one address serves one of them.`
+    )
+  }
+  if (servesDemoApi) assertDemoServerUrl(name, 'demo API', siteUrl)
+  if (servesDemoSite) assertDemoServerUrl(name, 'demo site', siteUrl)
 
   return {
     target: name,
@@ -88,6 +96,7 @@ export const resolveE2eTarget = (name: string, targets: E2eTargetsFile): E2eTarg
     blockTracking: definition.blockTracking ?? true,
     apiSpecPaths: [...apiSpecPaths],
     servesDemoApi,
+    servesDemoSite,
     expectedApiFailures: definition.expectedApiFailures ?? [],
     ...(definition.viewport === undefined ? {} : { viewport: definition.viewport })
   }

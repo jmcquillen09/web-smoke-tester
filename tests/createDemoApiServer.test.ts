@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict'
-import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
 import { request } from '@playwright/test'
 import { DEMO_API_HOST, DEMO_API_PORT } from '../demo/constants.ts'
-import { startDemoApiServer } from '../demo/startDemoApiServer.ts'
-import { stopDemoApiServer } from '../demo/stopDemoApiServer.ts'
+import { demoApi } from '../demo/demoApi.ts'
 import { ApiCheck } from '../e2e/ApiCheck.ts'
 import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
@@ -18,17 +16,10 @@ import { readE2eTargets } from '../e2e/readE2eTargets.ts'
 import { resolveE2eTarget } from '../e2e/resolveE2eTarget.ts'
 import { targetsFilePath } from '../e2e/targetsFilePath.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
+import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
 
-// Serves the demo API on a free port for one test and hands it the API's address.
-const withDemoApi = async (work: (baseUrl: string) => Promise<void>): Promise<void> => {
-  const server = await startDemoApiServer(0, '127.0.0.1')
-  const { port } = server.address() as AddressInfo
-  try {
-    await work(`http://127.0.0.1:${String(port)}`)
-  } finally {
-    await stopDemoApiServer(server)
-  }
-}
+const withDemoApi = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
+  withRunningDemoServer(demoApi, work)
 
 const planDemoApi = async (baseUrl: string) => {
   const discovered = await withSiteRequest({ ignoreHttpsErrors: false }, (siteRequest) =>

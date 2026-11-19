@@ -5,6 +5,9 @@ request per `GET` operation in it, and checks each answer against what the docum
 needs no access to the API's code and only ever reads: no other method is requested, no credentials
 are sent, and no request body is built.
 
+`npm run test:e2e-playwright [target]` runs these same API tests together with the web tests. There
+a site with no document to test is told so and gets its web tests alone; here it fails the run.
+
 It shares the site suite's targets, stages, runners and reports; read
 [`e2e-playwright.md`](e2e-playwright.md) for those. This page covers what is particular to the API
 run.
@@ -12,16 +15,16 @@ run.
 ## Running it
 
 ```bash
-npm run test:api-playwright             # the defaultTarget in targets.json
+npm run test:api-playwright             # the defaultTarget in targets.json: the bundled demo site
+npm run test:api-playwright demo-api    # the bundled demo API
 npm run test:api-playwright staging     # the target named "staging"
 ```
 
 Arguments after the target pass to `playwright test`, as in the site suite:
 `npm run test:api-playwright -- staging -g "/books"`. The runner prints the document it found, how
 many operations it tests and every `GET` operation it skips with the reason. Reports land where the
-site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site offers no
-document, the document has no operation a run can request, or an expected failure names an
-operation the run does not request; `2` the run was refused before it started.
+site suite's do. Exit codes: `0` every test passed or failed as expected; `1` a test failed, the site
+does not answer (a certificate the run does not accept is named as that), it offers no document, or the document has no operation a run can request; `2` the run was refused before it started.
 
 Only test APIs you own or have permission to test.
 
@@ -37,17 +40,19 @@ npm run test:api-playwright demo-api
 ```
 
 The `demo-api` target sets `servesDemoApi`, so the one command does the whole run
-([`scripts/runApiPlaywright.ts`](../scripts/runApiPlaywright.ts)):
+([`e2e/runPlaywrightForTarget.ts`](../e2e/runPlaywrightForTarget.ts)):
 
 1. It starts the demo API at the target's address and waits until it is listening
-   ([`demo/startDemoApiServer.ts`](../demo/startDemoApiServer.ts)).
+   ([`demo/startDemoServer.ts`](../demo/startDemoServer.ts)).
 2. It finds the document, plans the operations and runs the tests.
 3. It stops the demo API, whether the tests passed, failed or never started, and waits until the
    API no longer listens and every connection to it has ended
-   ([`demo/stopDemoApiServer.ts`](../demo/stopDemoApiServer.ts)). Only then does the command exit.
+   ([`demo/stopDemoServer.ts`](../demo/stopDemoServer.ts)). Only then does the command exit.
 
 The run prints `the demo API is running at …` and `the demo API has shut down` around the tests.
 A port something else holds stops the run with the reason before any test starts.
+The [demo site](e2e-playwright.md#the-demo-site), the `defaultTarget`, serves the same API and
+document beside its pages, so `npm run test:api-playwright` with no target gives the same result.
 `npm run serve:demo-api` serves the same API until stopped, to explore it by hand; stop it before
 an API run against `demo-api`, which needs the port.
 
@@ -94,9 +99,9 @@ Each named test is marked with Playwright's
 
 The test is marked once the operation has answered (`ApiOperationStage.execute`), so only the
 check's own finding is expected: an operation that never answers still fails the run. An entry
-whose path the run does not request (a misspelled path, an operation the document dropped) stops
-the run before any test starts
-([`e2e/assertExpectedApiFailuresPlanned.ts`](../e2e/assertExpectedApiFailuresPlanned.ts)).
+whose path the run does not request (a misspelled path, an operation the document dropped) is
+reported before the tests start and then ignored, and every test still runs
+([`e2e/findUnrequestedExpectedApiFailures.ts`](../e2e/findUnrequestedExpectedApiFailures.ts)).
 
 ## Finding the document
 
