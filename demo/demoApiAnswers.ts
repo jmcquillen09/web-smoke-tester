@@ -17,8 +17,8 @@ const AUTHORS = [
   { id: 2, name: 'Tomas Reed' }
 ]
 
-// What each address answers a reader who sent no credentials. Four answers break the document on
-// purpose: /api/books/search, /api/authors, /api/authors/1 and /api/stats.
+// What each address answers a reader who sent no credentials. Five answers break the document on
+// purpose, each marked as a seeded bug below.
 export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
   [DEMO_OPENAPI_PATH]: {
     status: 200,
@@ -43,5 +43,7 @@ export const demoApiAnswers: Readonly<Record<string, DemoAnswer>> = {
   '/api/authors/1': jsonAnswer(500, { error: 'The author could not be read.' }),
   // Seeded bug: the document declares only 200 for this operation.
   '/api/stats': jsonAnswer(202, { books: BOOKS.length, authors: AUTHORS.length }),
-  '/api/account': jsonAnswer(401, { error: 'Sign in to read your account.' })
+  '/api/account': jsonAnswer(401, { error: 'Sign in to read your account.' }),
+  // Seeded bug: the document marks this operation as secured, and it answers anyone.
+  '/api/account/orders': jsonAnswer(200, [{ id: 31, bookId: 1 }])
 }

@@ -10,6 +10,7 @@ import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
 import { fetchApiList } from '../e2e/fetchApiList.ts'
 import { fetchOpenApiDocument } from '../e2e/fetchOpenApiDocument.ts'
 import type { ApiAnswer } from '../e2e/fixtures/ApiAnswer.ts'
+import { findApiAuthProblems } from '../e2e/fixtures/findApiAuthProblems.ts'
 import { findApiBodyProblems } from '../e2e/fixtures/findApiBodyProblems.ts'
 import { findApiContentTypeProblems } from '../e2e/fixtures/findApiContentTypeProblems.ts'
 import { findApiStatusProblems } from '../e2e/fixtures/findApiStatusProblems.ts'
@@ -25,7 +26,8 @@ import { withRunningDemoServer } from './fixtures/withRunningDemoServer.ts'
 const PROBLEM_FINDERS: Record<ApiCheck, (answer: ApiAnswer) => string[]> = {
   [ApiCheck.BODY]: findApiBodyProblems,
   [ApiCheck.CONTENT_TYPE]: findApiContentTypeProblems,
-  [ApiCheck.STATUS]: findApiStatusProblems
+  [ApiCheck.STATUS]: findApiStatusProblems,
+  [ApiCheck.AUTH]: findApiAuthProblems
 }
 
 const withDemoApi = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
@@ -60,7 +62,8 @@ void test('an API run plans the demo API’s operations, one with a listed value
         '/api/authors',
         '/api/authors/1',
         '/api/stats',
-        '/api/account'
+        '/api/account',
+        '/api/account/orders'
       ]
     )
     assert.deepEqual(plan.skipped, [
@@ -94,7 +97,10 @@ void test('the checks find each bug seeded in the demo API, and nothing else', a
       '/authors': ['answered HTTP 200 as text/html; the document declares application/json'],
       '/authors/{authorId}': ['answered HTTP 500, a server error'],
       '/stats': ['answered HTTP 202, which the document does not declare (declared: 200)'],
-      '/account': []
+      '/account': [],
+      '/account/orders': [
+        'answered HTTP 200 to a request without credentials; the document marks the operation as secured, so it should answer 401 or 403'
+      ]
     })
   })
 })
