@@ -37,6 +37,24 @@
     "jj-keller": {
       "baseUrl": "https://www.jjkeller.com",
       "crawlLimit": 3
+    },
+    "crates": {
+      "baseUrl": "https://crates.io",
+      "crawlLimit": 3
+    },
+    "petstore": {
+      "baseUrl": "https://petstore3.swagger.io",
+      "apiSpecPath": "/api/v3/openapi.json",
+      "crawlLimit": 3
+    },
+    "fake-rest-api": {
+      "baseUrl": "https://fakerestapi.azurewebsites.net",
+      "crawlLimit": 3
+    },
+    "hugging-face": {
+      "baseUrl": "https://huggingface.co",
+      "apiSpecPath": "/.well-known/openapi.json",
+      "crawlLimit": 3
     }
   }
 }
