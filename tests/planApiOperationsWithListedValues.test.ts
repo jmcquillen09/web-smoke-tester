@@ -163,3 +163,68 @@ void test('a listed value that makes the address unsafe is never requested', asy
     }
   ])
 })
+
+void test('parameters declared innermost first are still filled outermost first', async () => {
+  const document = documentWith({
+    '/pets': { get: { responses: OK } },
+    '/pets/{petId}/visits': { get: { parameters: [pathParameter('petId')], responses: OK } },
+    '/pets/{petId}/visits/{visitId}': {
+      get: { parameters: [pathParameter('visitId'), pathParameter('petId')], responses: OK }
+    }
+  })
+  const api = apiOf({
+    'https://api.example/pets': [{ id: 7 }],
+    'https://api.example/pets/7/visits': [{ id: 3 }]
+  })
+
+  const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
+
+  assert.equal(plan.operations.at(-1)?.url, 'https://api.example/pets/7/visits/3')
+  assert.deepEqual(plan.skipped, [])
+})
+
+void test('a value is taken only from the list at the operation’s own address one level up', async () => {
+  const document = documentWith({
+    '/pets/{petId}/visits': {
+      get: { parameters: [{ ...pathParameter('petId'), example: 1 }], responses: OK }
+    },
+    '/pets/{petId}/visits/{visitId}': {
+      get: {
+        parameters: [{ ...pathParameter('petId'), example: 2 }, pathParameter('visitId')],
+        responses: OK
+      }
+    }
+  })
+  const api = apiOf({ 'https://api.example/pets/1/visits': [{ id: 3 }] })
+
+  const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
+
+  assert.deepEqual(
+    plan.operations.map((operation) => operation.url),
+    ['https://api.example/pets/1/visits']
+  )
+  assert.deepEqual(plan.skipped, [
+    {
+      path: '/pets/{petId}/visits/{visitId}',
+      reason: 'the document gives no example value for its path parameter "visitId"'
+    }
+  ])
+  assert.deepEqual(api.asked, [])
+})
+
+void test('a list operation that carries a query is still the list one level up', async () => {
+  const document = documentWith({
+    '/pets': {
+      get: {
+        parameters: [{ name: 'status', in: 'query', required: true, example: 'sold' }],
+        responses: OK
+      }
+    },
+    '/pets/{petId}': { get: { parameters: [pathParameter('petId')], responses: OK } }
+  })
+  const api = apiOf({ 'https://api.example/pets?status=sold': [{ id: 7 }] })
+
+  const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
+
+  assert.equal(plan.operations.at(-1)?.url, 'https://api.example/pets/7')
+})

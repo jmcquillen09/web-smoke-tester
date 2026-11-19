@@ -190,7 +190,9 @@ void test('an operation a run cannot request safely is skipped with the reason',
         reason: "it has a parameter $ref that names no definition in the document's components"
       }
     ],
-    awaitingPathValues: [{ path: '/pets/{petId}', parameter: 'petId' }]
+    awaitingPathValues: [
+      { path: '/pets/{petId}', parameter: 'petId', listUrl: 'https://api.example/pets' }
+    ]
   })
 })
 
@@ -380,5 +382,60 @@ void test('an operation that requires a query API key is skipped, example value 
   )
   assert.deepEqual(plan.skipped, [
     { path: '/reports', reason: 'it requires the credential query parameter "api_key"' }
+  ])
+})
+
+void test('an operation awaiting a path value names the address one level up, on its own server', () => {
+  const document = documentWith(
+    {
+      '/pets/{petId}/visits/{visitId}': {
+        get: {
+          parameters: [
+            { name: 'visitId', in: 'path', required: true },
+            { name: 'petId', in: 'path', required: true, example: 2 }
+          ],
+          responses: OK_JSON
+        }
+      },
+      '/{tenant}': {
+        get: { parameters: [{ name: 'tenant', in: 'path', required: true }], responses: OK_JSON }
+      },
+      '/files/{name}.json': {
+        get: { parameters: [{ name: 'name', in: 'path', required: true }], responses: OK_JSON }
+      }
+    },
+    { servers: [{ url: '/api/v3' }] }
+  )
+
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL).awaitingPathValues, [
+    {
+      path: '/pets/{petId}/visits/{visitId}',
+      parameter: 'visitId',
+      listUrl: 'https://api.example/api/v3/pets/2/visits'
+    },
+    { path: '/{tenant}', parameter: 'tenant', listUrl: '' },
+    { path: '/files/{name}.json', parameter: 'name', listUrl: '' }
+  ])
+})
+
+void test('the outermost path parameter without a value is the one awaited, whatever order they are declared in', () => {
+  const document = documentWith({
+    '/pets/{petId}/visits/{visitId}': {
+      get: {
+        parameters: [
+          { name: 'visitId', in: 'path', required: true },
+          { name: 'petId', in: 'path', required: true }
+        ],
+        responses: OK_JSON
+      }
+    }
+  })
+
+  assert.deepEqual(planApiOperations(document, DOCUMENT_URL).awaitingPathValues, [
+    {
+      path: '/pets/{petId}/visits/{visitId}',
+      parameter: 'petId',
+      listUrl: 'https://api.example/pets'
+    }
   ])
 })

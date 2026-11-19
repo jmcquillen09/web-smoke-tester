@@ -16,18 +16,15 @@ export interface ApiOperationPlanWithListedValues {
   }[]
 }
 
-// The list operation one level up from a path parameter: `/books/{bookId}/reviews` for `reviewId` in
-// `/books/{bookId}/reviews/{reviewId}`. Empty when the parameter is not a whole segment after one.
-const listPathOf = (path: string, parameter: string): string => {
-  const segments = path.split('/')
-  const parameterIndex = segments.indexOf(`{${parameter}}`)
-  const hasListSegment = parameterIndex > 1
-  return hasListSegment ? segments.slice(0, parameterIndex).join('/') : ''
+// An address without its query, which a list operation may carry and the level above it does not.
+const withoutQuery = (url: string): string => {
+  const address = new URL(url)
+  address.search = ''
+  return address.href
 }
 
 // The plan of a document whose path parameters without an example take a value from the answer of
-// the list operation one level up, when the run requests that operation anyway. Lists are read
-// outermost first, so `/a/{x}/b/{y}` is filled once `/a` has given `x`.
+// the operation the run requests at the address one level up. Lists are read outermost first.
 export const planApiOperationsWithListedValues = async (
   document: OpenApiDocument,
   documentUrl: string,
@@ -60,21 +57,20 @@ export const planApiOperationsWithListedValues = async (
       })
       return { plan: { ...plan, skipped }, filled }
     }
-    for (const { path, parameter } of waiting) {
+    for (const { path, parameter, listUrl } of waiting) {
       asked.add(`${path} ${parameter}`)
-      const listPath = listPathOf(path, parameter)
-      const list = plan.operations.find((operation) => operation.path === listPath)
+      const list = plan.operations.find((operation) => withoutQuery(operation.url) === listUrl)
       const hasList = list !== undefined
       if (!hasList) continue
       const body = (await readList(list.url)) ?? ''
       const value = findListedPathValue(body, parameter) ?? ''
       const hasValue = value !== ''
       if (!hasValue) {
-        emptyListPaths.set(path, listPath)
+        emptyListPaths.set(path, list.path)
         continue
       }
       values.set(path, new Map(values.get(path)).set(parameter, value))
-      filled.push({ path, parameter, value, listPath })
+      filled.push({ path, parameter, value, listPath: list.path })
     }
   }
 }

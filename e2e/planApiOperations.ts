@@ -9,7 +9,12 @@ export interface ApiOperationPlan {
   /** The GET operations the run leaves out, each with why. */
   readonly skipped: readonly { readonly path: string; readonly reason: string }[]
   /** The skipped operations that lack only a value for one path parameter, with that parameter. */
-  readonly awaitingPathValues: readonly { readonly path: string; readonly parameter: string }[]
+  readonly awaitingPathValues: readonly {
+    readonly path: string
+    readonly parameter: string
+    /** The address one level up, whose answer would list a value; empty when the path has none. */
+    readonly listUrl: string
+  }[]
 }
 
 /** Values for path parameters the document gives no example for, by operation path then parameter. */
@@ -28,6 +33,7 @@ interface AwaitingValue {
   readonly kind: 'awaiting'
   readonly reason: string
   readonly parameter: string
+  readonly listUrl: string
 }
 type Planned<T> = PlannedValue<T> | SkippedValue | AwaitingValue
 
@@ -128,8 +134,27 @@ const credentialQueryNamesOf = (document: OpenApiDocument): ReadonlySet<string> 
       .map((scheme) => scheme.name ?? '')
   )
 
+const addressOn = (server: URL, path: string): URL =>
+  new URL(`${server.pathname.replace(/\/$/, '')}${path}`, server.origin)
+
+// The address one level up from a path parameter that is a whole segment: `/books/1/reviews` for
+// `{reviewId}` in `/books/1/reviews/{reviewId}`. Empty when the parameter has no such level.
+const listUrlOf = (server: URL, filledPath: string, parameter: string): string => {
+  const segments = filledPath.split('/')
+  const parameterIndex = segments.indexOf(`{${parameter}}`)
+  const hasListSegment = parameterIndex > 1
+  return hasListSegment ? addressOn(server, segments.slice(0, parameterIndex).join('/')).href : ''
+}
+
+// Where a parameter's placeholder stands in the path; past its end for one the path does not hold.
+const placeInPath = (path: string, parameter: OpenApiParameter): number => {
+  const place = parameter.in === 'path' ? path.indexOf(`{${parameter.name}}`) : -1
+  const isInPath = place !== -1
+  return isInPath ? place : path.length
+}
+
 // The address to request: required path and query parameters take the document's own example
-// values, and a path parameter without one takes its listed value.
+// values, and a path parameter without one takes its listed value, outermost first.
 const planUrl = (
   path: string,
   parameters: readonly OpenApiParameter[],
@@ -139,7 +164,10 @@ const planUrl = (
 ): Planned<string> => {
   let filledPath = path
   const query = new URLSearchParams()
-  for (const parameter of parameters) {
+  const inPathOrder = [...parameters].sort(
+    (one, other) => placeInPath(path, one) - placeInPath(path, other)
+  )
+  for (const parameter of inPathOrder) {
     const isPathParameter = parameter.in === 'path'
     const isRequired = isPathParameter || parameter.required === true
     if (!isRequired) continue
@@ -157,7 +185,12 @@ const planUrl = (
     if (!hasValue) {
       const reason = `the document gives no example value for its ${parameter.in} parameter "${parameter.name}"`
       return isPathParameter
-        ? { kind: 'awaiting', reason, parameter: parameter.name }
+        ? {
+            kind: 'awaiting',
+            reason,
+            parameter: parameter.name,
+            listUrl: listUrlOf(server, filledPath, parameter.name)
+          }
         : skipped(reason)
     }
     if (isPathParameter) {
@@ -168,7 +201,7 @@ const planUrl = (
   }
   const isFilled = !filledPath.includes('{')
   if (!isFilled) return skipped('its path has a placeholder the document declares no parameter for')
-  const url = new URL(`${server.pathname.replace(/\/$/, '')}${filledPath}`, server.origin)
+  const url = addressOn(server, filledPath)
   url.search = query.toString()
   const isServerSite = url.origin === server.origin
   if (!isServerSite) return skipped(`its address ${url.href} is on another site than its server`)
@@ -249,7 +282,7 @@ export const planApiOperations = (
 ): ApiOperationPlan => {
   const operations: ApiOperation[] = []
   const skippedOperations: { path: string; reason: string }[] = []
-  const awaitingPathValues: { path: string; parameter: string }[] = []
+  const awaitingPathValues: { path: string; parameter: string; listUrl: string }[] = []
   for (const [path, item] of Object.entries(document.paths)) {
     const operation = item.get
     const hasGetOperation = operation !== undefined
@@ -263,7 +296,9 @@ export const planApiOperations = (
       listedValues.get(path) ?? NO_LISTED_VALUES
     )
     const hasRoom = operations.length < limit
-    if (isAwaiting(plan)) awaitingPathValues.push({ path, parameter: plan.parameter })
+    if (isAwaiting(plan)) {
+      awaitingPathValues.push({ path, parameter: plan.parameter, listUrl: plan.listUrl })
+    }
     if (!isPlanned(plan)) skippedOperations.push({ path, reason: plan.reason })
     else if (hasRoom) operations.push(plan.value)
     else {
