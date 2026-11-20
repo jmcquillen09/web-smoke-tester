@@ -42,7 +42,7 @@ and checks each answer:
 | Secured operation  | an operation the document marks as secured refuses a request without credentials     |
 
 Only `GET` is ever requested, with no credentials and no body, and every operation a run leaves
-out is printed with the reason. A small demo API under [`demo/`](demo) ships with the repo: five
+out is printed with the reason. The bundled demo site serves a small demo API ([`demo/`](demo)): five
 of its operations break their own document on purpose. A run against it shows twenty-three passing
 tests and five expected failures, one per seeded bug, and fails if a bug goes uncaught or anything
 else is flagged. A target's `expectedApiFailures` setting marks known defects of any API the same way. Read [`docs/api-playwright.md`](docs/api-playwright.md) for how the
@@ -83,9 +83,8 @@ document is found and which operations a run requests.
 - The HTML report lands in `playwright-report/` (`npx playwright show-report`), failure traces and
   screenshots in `test-results/`.
 - `npm run test:api-playwright [target]` runs only the API tests; it needs no browser installed.
-  With no target it tests the API the demo site serves. To try them on
-  the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
-  the tests and shuts the demo API down again before it exits.
+  With no target it tests the API the demo site serves: the run starts the site, runs the tests
+  and shuts the site down again before it exits.
 - `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, `npm run lint` lints, and
   `npm run format:check` checks formatting.
 - `npm run duplication` fails when the TypeScript, JavaScript or YAML holds a copy-pasted block that
@@ -112,8 +111,8 @@ document is found and which operations a run requests.
   one state through several (`runWorkflow`).
 - Each browser runs as two Playwright projects, `isolated-<browser>` and `workflows-<browser>`, the
   second gated on the first.
-- [`demo/createDemoApiServer.ts`](demo/createDemoApiServer.ts) is the bundled demo API and
-  [`demo/createDemoSiteServer.ts`](demo/createDemoSiteServer.ts) the bundled demo site. A run
-  against a target that sets `servesDemoApi` or `servesDemoSite` starts the one it names and shuts
-  it down; `npm run serve:demo-api` and `npm run serve:demo-site` serve them on their own.
+- [`demo/createDemoSiteServer.ts`](demo/createDemoSiteServer.ts) is the bundled demo site, and
+  [`demo/demoApiAnswers.ts`](demo/demoApiAnswers.ts) the demo API it serves. A run against a target
+  that sets `servesDemoSite` starts the site and shuts it down; `npm run serve:demo-site` serves it
+  on its own.
 - Everything is TypeScript that Node runs directly; there is no build step and no other runtime.

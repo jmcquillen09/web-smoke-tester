@@ -5,7 +5,7 @@ import { withDemoServer } from './withDemoServer.ts'
 // Runs `work` with the demo server the target names served at its address for the length of the
 // run; a target that names none runs `work` against whatever already answers there.
 export const withTargetDemoServer = <T>(
-  settings: Pick<E2eTargetSettings, 'baseUrl' | 'servesDemoApi' | 'servesDemoSite'>,
+  settings: Pick<E2eTargetSettings, 'baseUrl' | 'servesDemoSite'>,
   log: (message: string) => void,
   work: () => Promise<T>
 ): Promise<T> =>

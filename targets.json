@@ -18,18 +18,6 @@
       "crawlLimit": 10,
       "ignoreHttpsErrors": true
     },
-    "demo-api": {
-      "baseUrl": "http://localhost:4010",
-      "servesDemoApi": true,
-      "expectedApiFailures": [
-        { "path": "/books/search", "check": "body" },
-        { "path": "/authors", "check": "contentType" },
-        { "path": "/authors/{authorId}", "check": "status" },
-        { "path": "/stats", "check": "status" },
-        { "path": "/account/orders", "check": "auth" }
-      ],
-      "crawlLimit": 0
-    },
     "google": {
       "baseUrl": "https://www.google.com",
       "crawlLimit": 3
