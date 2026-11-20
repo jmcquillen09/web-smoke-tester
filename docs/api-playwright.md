@@ -136,7 +136,8 @@ A YAML document is no document.
   requests the addresses the page names as its document: Redoc's `spec-url` attribute and
   `Redoc.init` argument, Swagger UI's `url` and `urls` settings, and the `swagger-initializer.js`
   script Swagger UI keeps those settings in. It requests at most `DOCS_PAGE_LINK_LIMIT` addresses
-  from one page, only on the page's own site, never one `UNSAFE_LINK` matches, and goes no more
+  from one page, only on the page's own site, never one that `UNSAFE_LINK` matches or that carries a user name or
+  password, and goes no more
   than `DOCS_PAGE_FOLLOW_LIMIT` steps from the address it started at. A text that names neither
   Swagger UI nor Redoc sends the runner nowhere. Only an address written out is found: the runner
   runs no script, so a page that works its document's address out in one needs `apiSpecPath`.
@@ -144,7 +145,8 @@ A YAML document is no document.
   addresses tried: the run says where the page is, why a run may not have reached its document (an
   address worked out in script, one on another site, or one that did not answer with a document),
   and to set `apiSpecPath` to the address the page loads.
-- **A redirect is followed only on the same site** and never to an address `UNSAFE_LINK` matches
+- **A redirect is followed only on the same site** and never to an address that `UNSAFE_LINK`
+  matches or that carries a user name or password
   ([`e2e/fetchSiteText.ts`](../e2e/fetchSiteText.ts)); a redirect to another site is no document.
 
 ## Which operations a run requests

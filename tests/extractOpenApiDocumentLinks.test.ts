@@ -42,6 +42,7 @@ void test('an address on another site, and one a read-only run must not request,
     { url: "https://other.example/openapi.json" },
     { url: "//other.example/openapi.json" },
     { url: "/session/logout?next=/openapi.json" },
+    { url: "https://user:secret@api.example/openapi.json" },
     { url: "http://[not-an-address" },
     { url: "/openapi.json#/pets" },
     { url: "/openapi.json" }

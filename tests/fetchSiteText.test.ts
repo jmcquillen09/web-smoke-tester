@@ -69,6 +69,19 @@ void test('a redirect to an address that may end a session is never requested', 
   )
 })
 
+void test('a redirect to an address that carries a password is never requested', async () => {
+  await withSiteAnswering(
+    (origin) => ({
+      '/docs': redirectAnswer(origin.replace('://', '://user:secret@') + '/private'),
+      '/private': textAnswer('for user')
+    }),
+    async (origin, requested) => {
+      assert.equal(await fetchSiteText(`${origin}/docs`, 'text/plain', anyType), undefined)
+      assert.deepEqual(requested, ['/docs'])
+    }
+  )
+})
+
 void test('a redirect to another site is never requested', async () => {
   await withSiteAnswering(
     () => ({ '/landing': textAnswer('another site') }),
