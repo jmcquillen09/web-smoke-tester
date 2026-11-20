@@ -1,6 +1,7 @@
 import { JSON_SCHEMA_2020_12, SCHEMA_REFERENCE } from './constants.ts'
 import { isJsonArray } from './isJsonArray.ts'
 import { isJsonObject } from './isJsonObject.ts'
+import { isNamedSchemas } from './isNamedSchemas.ts'
 import type { Json } from './Json.ts'
 import type { JsonObject } from './JsonObject.ts'
 import { mapJsonSchemas } from './mapJsonSchemas.ts'
@@ -33,7 +34,8 @@ const referencedSchemaNames = (value: Json): string[] => {
   return schemaEntriesOf(value).flatMap(([keyword, held]) => {
     const name = keyword === '$ref' ? schemaNameOf(held) : ''
     const isSchemaReference = name !== ''
-    return isSchemaReference ? [name] : referencedSchemaNames(held)
+    if (isSchemaReference) return [name]
+    return referencedSchemaNames(isNamedSchemas(keyword, held) ? Object.values(held) : held)
   })
 }
 

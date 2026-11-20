@@ -16,8 +16,20 @@ void test('every schema is adapted, one held under a keyword or in a list includ
   assert.deepEqual(mapJsonSchemas(schema, titled), {
     type: 'object',
     title: 'seen',
-    properties: { title: 'seen', name: { type: 'string', title: 'seen' } },
+    properties: { name: { type: 'string', title: 'seen' } },
     anyOf: [{ type: 'number', title: 'seen' }]
+  })
+})
+
+void test('a schema held by name is adapted under its name, whatever keyword the name spells', () => {
+  const schema = { properties: { enum: { type: 'string' }, default: { type: 'number' } } }
+
+  assert.deepEqual(mapJsonSchemas(schema, titled), {
+    title: 'seen',
+    properties: {
+      enum: { type: 'string', title: 'seen' },
+      default: { type: 'number', title: 'seen' }
+    }
   })
 })
 

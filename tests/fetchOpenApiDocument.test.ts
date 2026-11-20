@@ -87,6 +87,27 @@ void test('a Swagger UI page leads to its document through its settings script, 
   )
 })
 
+void test('an address in a settings script is read against the page that loads the script', async () => {
+  const page = `<div id="swagger-ui"></div><script src="/assets/swagger-initializer.js"></script>`
+
+  await withSiteAnswering(
+    () => ({
+      '/docs/index.html': textAnswer(page, HTML),
+      '/assets/swagger-initializer.js': textAnswer(
+        'window.ui = SwaggerUIBundle({ url: "./openapi.json" })',
+        'application/javascript'
+      ),
+      '/docs/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
+    }),
+    async (origin) => {
+      assert.equal(
+        (await fetchOpenApiDocument(`${origin}/docs/index.html`))?.url,
+        `${origin}/docs/openapi.json`
+      )
+    }
+  )
+})
+
 void test('the first address a page names that answers with a document is the document', async () => {
   const page = `<script>SwaggerUIBundle({ urls: [{ url: "/missing.json" }, { url: "/openapi.json" }] })</script>`
 
