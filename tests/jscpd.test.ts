@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { copyFileSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import test from 'node:test'
+import test, { type TestContext } from 'node:test'
 
 import packageJson from '../package.json' with { type: 'json' }
 
@@ -43,9 +43,16 @@ const GIT_SETTINGS = [
   'core.autocrlf=false'
 ].flatMap((setting) => ['-c', setting])
 
-// A repository whose origin/main holds `files` and this repo's jscpd settings; returns its folder.
-const createRepositoryWithMain = (files: Readonly<Record<string, string>>): string => {
+// A repository whose origin/main holds `files` and this repo's jscpd settings, removed when the
+// test ends; returns its folder.
+const createRepositoryWithMain = (
+  context: TestContext,
+  files: Readonly<Record<string, string>>
+): string => {
   const folder = mkdtempSync(path.join(tmpdir(), 'duplication-check-'))
+  context.after(() => {
+    rmSync(folder, { recursive: true, force: true, maxRetries: 3 })
+  })
   const git = (...args: readonly string[]): void => {
     execFileSync('git', [...GIT_SETTINGS, ...args], {
       cwd: folder
@@ -71,16 +78,16 @@ const runDuplicationCheck = (
   return { code: run.status ?? 1, output: run.stdout + run.stderr }
 }
 
-void test('code that copies nothing passes the duplication check', () => {
-  const folder = createRepositoryWithMain({ 'ports.ts': TYPESCRIPT_BLOCK })
+void test('code that copies nothing passes the duplication check', (context) => {
+  const folder = createRepositoryWithMain(context, { 'ports.ts': TYPESCRIPT_BLOCK })
 
   const run = runDuplicationCheck(folder)
 
   assert.equal(run.code, 0, run.output)
 })
 
-void test('a TypeScript block copied since main fails the duplication check, naming both files', () => {
-  const folder = createRepositoryWithMain({ 'ports.ts': TYPESCRIPT_BLOCK })
+void test('a TypeScript block copied since main fails the duplication check, naming both files', (context) => {
+  const folder = createRepositoryWithMain(context, { 'ports.ts': TYPESCRIPT_BLOCK })
   writeFileSync(path.join(folder, 'copiedPorts.ts'), TYPESCRIPT_BLOCK)
 
   const run = runDuplicationCheck(folder)
@@ -90,8 +97,8 @@ void test('a TypeScript block copied since main fails the duplication check, nam
   assert.match(run.output, /copiedPorts\.ts/)
 })
 
-void test('a YAML block copied since main fails the duplication check', () => {
-  const folder = createRepositoryWithMain({ 'first.yml': YAML_BLOCK })
+void test('a YAML block copied since main fails the duplication check', (context) => {
+  const folder = createRepositoryWithMain(context, { 'first.yml': YAML_BLOCK })
   writeFileSync(path.join(folder, 'second.yml'), YAML_BLOCK)
 
   const run = runDuplicationCheck(folder)

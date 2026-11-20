@@ -5,8 +5,6 @@ import { runNodeScript } from './runNodeScript.ts'
 
 const SCRIPTS_FOLDER = path.join(import.meta.dirname, '..', '..', 'scripts')
 
-// Runs one of the suite's runners with `args` against the targets in `targetsFile`, with `env` on
-// top, and resolves with its exit code and everything it printed.
 export const runPlaywrightRunner = (
   runnerFile: 'runApiPlaywright.ts' | 'runE2ePlaywright.ts' | 'runWebPlaywright.ts',
   targetsFile: string,

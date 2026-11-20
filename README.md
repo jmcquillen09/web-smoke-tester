@@ -91,7 +91,8 @@ document is found and which operations a run requests.
   `origin/main` does not ([jscpd](https://www.npmjs.com/package/jscpd), set up in [`.jscpd.json`](.jscpd.json)). `main`
   holds none, so any copy fails: move the shared code into one place both callers import.
 - `npm install` points git at [`hooks/`](hooks), whose `pre-push` hook runs `npm run duplication` before
-  every push (`npm run setup-hooks` does the same by hand).
+  every push (`npm run setup-hooks` does the same by hand). The hook reads the files as they are on disk; CI
+  checks the pushed commit.
 - Every pull request and every push to `main` runs these in GitHub Actions
   ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the typecheck, lint, duplication check and unit tests on Linux,
   Windows and macOS, the format check, and the web and API tests against the demo site in Chrome,
