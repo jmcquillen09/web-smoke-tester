@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { demoApi } from '../demo/demoApi.ts'
+import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import type { ApiOperation } from '../e2e/ApiOperation.ts'
@@ -23,12 +23,12 @@ import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 const HOST = '127.0.0.1'
 const PLAYWRIGHT_CLI = createRequire(import.meta.url).resolve('@playwright/test/cli')
 
-// Runs the status spec on one `/stats` operation of a demo API whose target expects that check to
+// Runs the status spec on one `/stats` operation of a demo site whose target expects that check to
 // fail, with no browser installed where Playwright looks, and resolves with the run's exit code.
 const runStatusSpec = async (
   operationOf: (baseUrl: string) => Pick<ApiOperation, 'url' | 'responses'>
 ): Promise<{ code: number; output: string }> => {
-  const server = await startDemoServer(demoApi, 0, HOST)
+  const server = await startDemoServer(demoSite, 0, HOST)
   const baseUrl = `http://${HOST}:${String((server.address() as AddressInfo).port)}`
   const scratch = mkdtempSync(path.join(tmpdir(), 'api-spec-run-'))
   const targetsFile = writeTargetsFile(
@@ -62,7 +62,7 @@ const runStatusSpec = async (
       }
     )
   } finally {
-    await stopDemoServer(demoApi, server)
+    await stopDemoServer(demoSite, server)
   }
 }
 

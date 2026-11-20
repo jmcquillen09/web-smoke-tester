@@ -45,7 +45,7 @@ void test('Playwright started without a runner serves the target’s demo server
       [TARGETS_FILE_VARIABLE]: writeTargetsFile(
         JSON.stringify({
           defaultTarget: 'demo',
-          targets: { demo: { baseUrl, servesDemoApi: true } }
+          targets: { demo: { baseUrl, servesDemoSite: true } }
         })
       ),
       [TARGET_VARIABLE]: 'demo',

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
-import { demoApi } from '../demo/demoApi.ts'
+import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
@@ -20,7 +20,7 @@ const runApiRunner = (
 ): Promise<{ code: number; output: string }> =>
   runPlaywrightRunner('runApiPlaywright.ts', targetsFile, ['demo', ...args])
 
-void test('a run that stops before its tests start still shuts the demo API down', async () => {
+void test('a run that stops before its tests start still shuts the demo site down', async () => {
   const port = await findFreePort()
   const targetsFile = writeTargetsFile(
     JSON.stringify({
@@ -28,7 +28,7 @@ void test('a run that stops before its tests start still shuts the demo API down
       targets: {
         demo: {
           baseUrl: `http://${HOST}:${String(port)}`,
-          servesDemoApi: true,
+          servesDemoSite: true,
           apiSpecPath: '/no-such-document.json'
         }
       }
@@ -38,11 +38,11 @@ void test('a run that stops before its tests start still shuts the demo API down
   const run = await runApiRunner(targetsFile)
 
   assert.equal(run.code, 1)
-  assert.match(run.output, /the demo API is running at/)
+  assert.match(run.output, /the demo site is running at/)
   assert.match(run.output, /The demo target has no OpenAPI or Swagger document at/)
-  assert.match(run.output, /the demo API has shut down/)
-  const next = await startDemoServer(demoApi, port, HOST)
-  await stopDemoServer(demoApi, next)
+  assert.match(run.output, /the demo site has shut down/)
+  const next = await startDemoServer(demoSite, port, HOST)
+  await stopDemoServer(demoSite, next)
 })
 
 void test('an expected failure the run does not request is reported and ignored, and the tests still run', async () => {
@@ -53,7 +53,7 @@ void test('an expected failure the run does not request is reported and ignored,
       targets: {
         demo: {
           baseUrl: `http://${HOST}:${String(port)}`,
-          servesDemoApi: true,
+          servesDemoSite: true,
           expectedApiFailures: [{ path: '/no-such-operation', check: 'status' }]
         }
       }
@@ -71,22 +71,22 @@ void test('an expected failure the run does not request is reported and ignored,
 })
 
 void test('a run whose port is taken stops with the reason and leaves the port’s holder running', async () => {
-  const holder = await startDemoServer(demoApi, 0, HOST)
+  const holder = await startDemoServer(demoSite, 0, HOST)
   const { port } = holder.address() as AddressInfo
   const targetsFile = writeTargetsFile(
     JSON.stringify({
       defaultTarget: 'demo',
-      targets: { demo: { baseUrl: `http://${HOST}:${String(port)}`, servesDemoApi: true } }
+      targets: { demo: { baseUrl: `http://${HOST}:${String(port)}`, servesDemoSite: true } }
     })
   )
   try {
     const run = await runApiRunner(targetsFile)
 
     assert.equal(run.code, 1)
-    assert.doesNotMatch(run.output, /the demo API is running at/)
+    assert.doesNotMatch(run.output, /the demo site is running at/)
     assert.equal(holder.listening, true)
   } finally {
-    await stopDemoServer(demoApi, holder)
+    await stopDemoServer(demoSite, holder)
   }
 })
 

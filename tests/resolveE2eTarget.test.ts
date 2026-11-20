@@ -21,7 +21,6 @@ void test('a target with only a base URL tests its start page and crawls by defa
     ignoreHttpsErrors: false,
     blockTracking: true,
     apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
-    servesDemoApi: false,
     servesDemoSite: false,
     expectedApiFailures: []
   })
@@ -54,7 +53,6 @@ void test('a target keeps the paths, crawl limit and certificate setting it name
     ignoreHttpsErrors: true,
     blockTracking: true,
     apiSpecPaths: [...OPENAPI_DOCUMENT_PATHS],
-    servesDemoApi: false,
     servesDemoSite: false,
     expectedApiFailures: []
   })
@@ -192,25 +190,6 @@ void test('an OpenAPI document path a read-only run may not request is refused',
   })
 })
 
-void test('a target can have an API run serve the demo API at its local address', () => {
-  const targets = targetsWith({
-    demo: { baseUrl: 'http://localhost:4010', servesDemoApi: true }
-  })
-
-  assert.equal(resolveE2eTarget('demo', targets).servesDemoApi, true)
-})
-
-void test('the demo API is served only at a local http address with a port', () => {
-  for (const baseUrl of ['https://www.example.com', 'http://localhost', 'https://localhost:4010']) {
-    const targets = targetsWith({ demo: { baseUrl, servesDemoApi: true } })
-
-    assert.throws(() => resolveE2eTarget('demo', targets), {
-      name: 'E2eConfigurationError',
-      message: `The demo target serves the demo API, so its baseUrl must be http://localhost:<port>; "${baseUrl}" is not.`
-    })
-  }
-})
-
 void test('a target keeps the API checks it expects to fail', () => {
   const targets = targetsWith({
     staging: {
@@ -233,25 +212,12 @@ void test('a target can have a site run serve the demo site at its local address
 })
 
 void test('the demo site is served only at a local http address with a port', () => {
-  const targets = targetsWith({
-    demo: { baseUrl: 'https://www.example.com', servesDemoSite: true }
-  })
+  for (const baseUrl of ['https://www.example.com', 'http://localhost', 'https://localhost:4020']) {
+    const targets = targetsWith({ demo: { baseUrl, servesDemoSite: true } })
 
-  assert.throws(() => resolveE2eTarget('demo', targets), {
-    name: 'E2eConfigurationError',
-    message:
-      'The demo target serves the demo site, so its baseUrl must be http://localhost:<port>; "https://www.example.com" is not.'
-  })
-})
-
-void test('one target cannot serve both demo servers', () => {
-  const targets = targetsWith({
-    demo: { baseUrl: 'http://localhost:4020', servesDemoApi: true, servesDemoSite: true }
-  })
-
-  assert.throws(() => resolveE2eTarget('demo', targets), {
-    name: 'E2eConfigurationError',
-    message:
-      'The demo target sets both servesDemoApi and servesDemoSite; one address serves one of them.'
-  })
+    assert.throws(() => resolveE2eTarget('demo', targets), {
+      name: 'E2eConfigurationError',
+      message: `The demo target serves the demo site, so its baseUrl must be http://localhost:<port>; "${baseUrl}" is not.`
+    })
+  }
 })

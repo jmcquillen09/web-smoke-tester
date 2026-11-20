@@ -1,13 +1,8 @@
 import assert from 'node:assert/strict'
-import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
 import { DEMO_SITE_HOST, DEMO_SITE_PORT } from '../demo/constants.ts'
-import { demoApi } from '../demo/demoApi.ts'
-import { demoApiAnswers } from '../demo/demoApiAnswers.ts'
 import { demoSite } from '../demo/demoSite.ts'
-import { startDemoServer } from '../demo/startDemoServer.ts'
-import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { discoverSitePages } from '../e2e/discoverSitePages.ts'
 import { fetchPageHtml } from '../e2e/fetchPageHtml.ts'
 import { readE2eTargets } from '../e2e/readE2eTargets.ts'
@@ -108,38 +103,4 @@ void test('the repo’s demo-site target has a site run serve the demo site wher
 
 void test('a run without a target name tests the demo site', () => {
   assert.equal(readE2eTargets(targetsFilePath({})).defaultTarget, 'demo-site')
-})
-
-void test('the demo site answers every address of the demo API as the demo API does', async () => {
-  const api = await startDemoServer(demoApi, 0, '127.0.0.1')
-  const apiUrl = `http://127.0.0.1:${String((api.address() as AddressInfo).port)}`
-  try {
-    await withDemoSite(async (baseUrl) => {
-      for (const path of Object.keys(demoApiAnswers)) {
-        const [fromSite, fromApi] = await Promise.all([
-          fetch(`${baseUrl}${path}`),
-          fetch(`${apiUrl}${path}`)
-        ])
-
-        assert.equal(fromSite.status, fromApi.status, path)
-        assert.equal(
-          fromSite.headers.get('content-type'),
-          fromApi.headers.get('content-type'),
-          path
-        )
-        assert.equal(await fromSite.text(), await fromApi.text(), path)
-      }
-    })
-  } finally {
-    await stopDemoServer(demoApi, api)
-  }
-})
-
-void test('the repo’s demo-site target expects the API failures the demo-api target does', () => {
-  const targets = readE2eTargets(targetsFilePath({}))
-
-  assert.deepEqual(
-    resolveE2eTarget('demo-site', targets).expectedApiFailures,
-    resolveE2eTarget('demo-api', targets).expectedApiFailures
-  )
 })

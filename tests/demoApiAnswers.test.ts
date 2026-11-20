@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { request } from '@playwright/test'
-import { DEMO_API_HOST, DEMO_API_PORT } from '../demo/constants.ts'
-import { demoApi } from '../demo/demoApi.ts'
+import { demoSite } from '../demo/demoSite.ts'
 import { ApiCheck } from '../e2e/ApiCheck.ts'
 import { OPENAPI_DOCUMENT_PATHS } from '../e2e/constants.ts'
 import { discoverOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
@@ -34,12 +33,12 @@ const PROBLEM_FINDERS: Record<ApiCheck, (answer: ApiAnswer) => string[]> = {
 }
 
 const withDemoApi = (work: (baseUrl: string) => Promise<void>): Promise<void> =>
-  withRunningDemoServer(demoApi, work)
+  withRunningDemoServer(demoSite, work)
 
 const planDemoApi = (baseUrl: string) =>
   withSiteRequest({ ignoreHttpsErrors: false }, async (siteRequest) => {
     const discovered = await discoverOpenApiDocument(
-      { target: 'demo-api', baseUrl, apiSpecPaths: OPENAPI_DOCUMENT_PATHS },
+      { target: 'demo-site', baseUrl, apiSpecPaths: OPENAPI_DOCUMENT_PATHS },
       (url) => fetchOpenApiDocument(siteRequest, url)
     )
     const { plan } = await planApiOperationsWithListedValues(
@@ -108,8 +107,8 @@ void test('the checks find each bug seeded in the demo API, and nothing else', a
   })
 })
 
-void test('the repo’s demo-api target expects exactly the failures the checks find', async () => {
-  const settings = resolveE2eTarget('demo-api', readE2eTargets(targetsFilePath({})))
+void test('the repo’s demo-site target expects exactly the failures the checks find', async () => {
+  const settings = resolveE2eTarget('demo-site', readE2eTargets(targetsFilePath({})))
 
   await withDemoApi(async (baseUrl) => {
     const plan = await planDemoApi(baseUrl)
@@ -137,11 +136,4 @@ void test('the demo API refuses a request that would change its data', async () 
 
     assert.equal(response.status, 405)
   })
-})
-
-void test('the repo’s demo-api target has an API run serve the demo API where serve:demo-api does', () => {
-  const settings = resolveE2eTarget('demo-api', readE2eTargets(targetsFilePath({})))
-
-  assert.equal(settings.servesDemoApi, true)
-  assert.equal(settings.baseUrl, `http://${DEMO_API_HOST}:${String(DEMO_API_PORT)}`)
 })

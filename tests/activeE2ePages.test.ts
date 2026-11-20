@@ -11,7 +11,6 @@ const SETTINGS = {
   ignoreHttpsErrors: false,
   blockTracking: true,
   apiSpecPaths: ['/openapi.json'],
-  servesDemoApi: false,
   servesDemoSite: false,
   expectedApiFailures: []
 }
