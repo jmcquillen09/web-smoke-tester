@@ -13,8 +13,7 @@ export interface DiscoveredOpenApiDocument {
 export type FetchOpenApiDocument = (url: string) => Promise<OpenApiDocumentSearch>
 
 // The site's OpenAPI document: the first of the target's `apiSpecPaths` that leads to one. A site
-// that offers none stops the run: with the docs pages it found but could not read a document's
-// address from, when there are any, else with the addresses it tried.
+// with none stops the run, naming the docs pages that led to none, else the addresses tried.
 export const discoverOpenApiDocument = async (
   settings: Pick<E2eTargetSettings, 'target' | 'baseUrl' | 'apiSpecPaths'>,
   fetchOpenApiDocument: FetchOpenApiDocument

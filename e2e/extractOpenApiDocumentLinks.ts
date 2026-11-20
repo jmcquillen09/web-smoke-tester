@@ -11,9 +11,8 @@ const DOCUMENT_LINKS: readonly RegExp[] = [
   /<script\s[^>]*?\bsrc\s*=\s*["']([^"']*swagger-initializer\.js[^"']*)["']/gi
 ]
 
-// The addresses a Swagger UI or Redoc page names as its document, in the page's order within each
-// way of naming one and without repeats, up to DOCS_PAGE_LINK_LIMIT. Any other text names none. An
-// address on another site, and one a read-only run must not request (UNSAFE_LINK), is dropped.
+// The addresses a Swagger UI or Redoc page names as its document, without repeats, up to
+// DOCS_PAGE_LINK_LIMIT; one on another site or that UNSAFE_LINK matches is dropped.
 export const extractOpenApiDocumentLinks = (text: string, pageUrl: string): string[] => {
   const isDocsPage = isApiDocsPage(text)
   if (!isDocsPage) return []

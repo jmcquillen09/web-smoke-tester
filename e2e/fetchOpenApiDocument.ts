@@ -56,10 +56,8 @@ const findLinkedDocument = async (
   return undefined
 }
 
-// Fetches one address for the document discovery: an OpenAPI 3 or Swagger 2.0 document in JSON, or
-// the document a Swagger UI or Redoc page there names. Only an answer that ended on the
-// address's own site is read; an error status and a redirect elsewhere are no document. A docs
-// page that leads to no document is reported as that, so the run can say what it found.
+// What one address gives the document discovery: an OpenAPI 3 or Swagger 2.0 document in JSON, the
+// document a Swagger UI or Redoc page there names, or that page when it leads to none.
 export const fetchOpenApiDocument = async (
   siteRequest: APIRequestContext,
   url: string

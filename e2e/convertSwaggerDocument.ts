@@ -155,8 +155,7 @@ const asOpenApiPathItem = (
 }
 
 // A Swagger 2.0 document, served from `documentAddress`, as the OpenAPI 3 document that says the
-// same, for `OpenApiDocumentSchema` to read: only the parts a run reads are carried over. A shared
-// response is written out in each operation that points at it, so `responses` has no counterpart.
+// same: only the parts a run reads, with each shared response written out where it is pointed at.
 export const convertSwaggerDocument = (
   swagger: SwaggerDocument,
   documentAddress: string
