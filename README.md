@@ -50,6 +50,9 @@ document is found and which operations a run requests.
 ## Running
 
 - `npm install`, then `npx playwright install --with-deps chromium` (add other browsers as needed).
+  The install reads `@studnicky/eslint-config` from GitHub Packages, which needs a GitHub token with the
+  `read:packages` scope in your user `.npmrc`:
+  `npm config set //npm.pkg.github.com/:_authToken <token>`.
 - Add your site to [`targets.json`](targets.json):
 
   ```json
@@ -82,10 +85,10 @@ document is found and which operations a run requests.
   With no target it tests the API the demo site serves. To try them on
   the bundled demo API, run `npm run test:api-playwright demo-api`: it starts the demo API, runs
   the tests and shuts the demo API down again before it exits.
-- `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, and
+- `npm test` runs the suite's own unit tests, `npm run typecheck` typechecks, `npm run lint` lints, and
   `npm run format:check` checks formatting.
 - Every pull request and every push to `main` runs these in GitHub Actions
-  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the typecheck and unit tests on Linux,
+  ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the typecheck, lint and unit tests on Linux,
   Windows and macOS, the format check, and the web and API tests against the demo site in Chrome,
   Firefox and Safari's engine. The `ci-gate` job passes only when all of them did.
 
