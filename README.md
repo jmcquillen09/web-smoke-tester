@@ -96,7 +96,7 @@ document is found and which operations a run requests.
 - Every pull request and every push to `main` runs these in GitHub Actions
   ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)): the typecheck, lint, duplication check and unit tests on Linux,
   Windows and macOS, the format check, and the web and API tests against the demo site in Chrome,
-  Firefox and Safari's engine. The `ci-gate` job passes only when all of them did.
+  Firefox, Safari's engine and Edge. The `ci-gate` job passes only when all of them did.
 
 ## How it is built
 
