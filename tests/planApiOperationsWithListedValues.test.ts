@@ -6,7 +6,6 @@ import { planApiOperationsWithListedValues } from '../e2e/planApiOperationsWithL
 
 const DOCUMENT_URL = 'https://api.example/openapi.json'
 const OK = { '200': {} }
-// The lists of an API with one pet, 7, which has one visit, 3.
 const PET_SEVEN_WITH_VISIT_THREE = {
   'https://api.example/pets': [{ id: 7 }],
   'https://api.example/pets/7/visits': [{ id: 3 }]
