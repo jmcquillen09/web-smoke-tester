@@ -110,16 +110,44 @@ reported before the tests start and then ignored, and every test still runs
 
 ## Finding the document
 
-A target's `apiSpecPath` in [`targets.json`](../targets.json) names the document, as a path from
-the site's root; one that resolves to another site, or that `UNSAFE_LINK` matches, refuses the run. Without it the runner asks the site for each address in `OPENAPI_DOCUMENT_PATHS`
-([`e2e/constants.ts`](../e2e/constants.ts)) in order and takes the first that answers with a
-document ([`e2e/discoverOpenApiDocument.ts`](../e2e/discoverOpenApiDocument.ts)).
+A target's `apiSpecPath` in [`targets.json`](../targets.json) names the document, or the Swagger
+UI or Redoc page that shows it, as a path from the site's root; one that resolves to another site,
+or that `UNSAFE_LINK` matches, refuses the run. Without it the runner asks the site for each address
+in `OPENAPI_DOCUMENT_PATHS` ([`e2e/constants.ts`](../e2e/constants.ts)) in order (the usual
+addresses of a document, then of a docs page) and takes the first that
+leads to a document ([`e2e/discoverOpenApiDocument.ts`](../e2e/discoverOpenApiDocument.ts)).
 
-A document is OpenAPI 3 in JSON, served from the target's own site
-([`e2e/fetchOpenApiDocument.ts`](../e2e/fetchOpenApiDocument.ts)). A Swagger 2.0 document, a YAML
-document and a redirect to another site are each no document. A redirect is followed only on the
-same site and never to an address `UNSAFE_LINK` matches
-([`e2e/fetchSiteText.ts`](../e2e/fetchSiteText.ts)).
+A document is OpenAPI 3 or Swagger 2.0, in JSON, served from the target's own site
+([`e2e/fetchOpenApiDocument.ts`](../e2e/fetchOpenApiDocument.ts)). The content type it is served as
+does not matter; what the text holds does ([`e2e/parseOpenApiDocument.ts`](../e2e/parseOpenApiDocument.ts)).
+A YAML document is no document.
+
+- **A Swagger 2.0 document is read as the OpenAPI 3 document that says the same**
+  ([`e2e/convertSwaggerDocument.ts`](../e2e/convertSwaggerDocument.ts)), so every rule on this page
+  holds for it. Its `host`, `basePath` and `schemes` are its servers, one for each scheme, with the
+  host and scheme of the address that served the document standing in for one it leaves out, and an
+  operation's own `schemes` are that operation's servers; a
+  parameter's own `default`, `enum` and `x-example` are its example values; a response's `schema`
+  is its body in each content type the operation's `produces`, else the document's, names (any
+  content type when neither names one); and its schemas are read as OpenAPI 3.0 schemas, with
+  `x-nullable` as `nullable`.
+- **An answer that is no document is read as a Swagger UI or Redoc page**
+  ([`e2e/extractOpenApiDocumentLinks.ts`](../e2e/extractOpenApiDocumentLinks.ts)). The runner
+  requests the addresses the page names as its document: Redoc's `spec-url` attribute and
+  `Redoc.init` argument, Swagger UI's `url` and `urls` settings, and the `swagger-initializer.js`
+  script Swagger UI keeps those settings in, whose addresses are read against the page as a browser
+  reads them. It requests at most `DOCS_PAGE_LINK_LIMIT` addresses from one page or script, only on
+  the page's own site, and never one that `UNSAFE_LINK` matches or that carries a user name or
+  password. An address that answers with another page is not read as a docs page in turn, and a
+  text that names neither Swagger UI nor Redoc sends the runner nowhere. Only an address written out is found: the runner
+  runs no script, so a page that works its document's address out in one needs `apiSpecPath`.
+- **A docs page that leads to no document is named in the error**, in place of the list of
+  addresses tried: the run says where the page is, why a run may not have reached its document (an
+  address worked out in script, one on another site, or one that did not answer with a document),
+  and to set `apiSpecPath` to the address the page loads.
+- **A redirect is followed only on the same site** and never to an address that `UNSAFE_LINK`
+  matches or that carries a user name or password
+  ([`e2e/fetchSiteText.ts`](../e2e/fetchSiteText.ts)); a redirect to another site is no document.
 
 ## Which operations a run requests
 

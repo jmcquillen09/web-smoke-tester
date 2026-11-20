@@ -17,3 +17,8 @@ void test('an address whose path or query suggests a change is unsafe', () => {
 void test('an address is judged as a URL reads it, not as it is written', () => {
   assert.equal(isSafeAddress(new URL('/log\tout', SITE)), false)
 })
+
+void test('an address that carries a user name or a password is unsafe', () => {
+  assert.equal(isSafeAddress(new URL('https://user:secret@site.example/books')), false)
+  assert.equal(isSafeAddress(new URL('https://user@site.example/books')), false)
+})

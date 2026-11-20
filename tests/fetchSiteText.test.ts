@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
-import { createServer, type ServerResponse } from 'node:http'
 import test from 'node:test'
 
 import { fetchSiteText as fetchSiteTextWith } from '../e2e/fetchSiteText.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
-import { withServerListening } from './fixtures/withServerListening.ts'
+import { redirectAnswer } from './fixtures/redirectAnswer.ts'
+import { textAnswer } from './fixtures/textAnswer.ts'
+import { withSiteAnswering } from './fixtures/withSiteAnswering.ts'
 
-const HOST = '127.0.0.1'
 const anyType = (): boolean => true
 
 const fetchSiteText = (
@@ -18,42 +18,9 @@ const fetchSiteText = (
     fetchSiteTextWith(siteRequest, url, accept, isWantedType)
   )
 
-type Answer = (response: ServerResponse) => void
-
-const redirectTo =
-  (location: string): Answer =>
-  (response) => {
-    response.writeHead(302, { location }).end()
-  }
-
-const textOf =
-  (body: string, contentType = 'text/plain'): Answer =>
-  (response) => {
-    response.writeHead(200, { 'content-type': contentType }).end(body)
-  }
-
-// Serves a site as a map from path to answer for one test, and records each path requested.
-const withSite = async (
-  answers: (origin: string) => Record<string, Answer>,
-  work: (origin: string, requested: string[]) => Promise<void>
-): Promise<void> => {
-  const requested: string[] = []
-  let routes: Record<string, Answer> = {}
-  const server = createServer((request, response) => {
-    const path = request.url ?? ''
-    requested.push(path)
-    const answer = routes[path] ?? ((missing: ServerResponse) => missing.writeHead(404).end())
-    answer(response)
-  })
-  await withServerListening(server, 'http', HOST, async (origin) => {
-    routes = answers(origin)
-    await work(origin, requested)
-  })
-}
-
 void test('an OK answer of a wanted content type is read', async () => {
-  await withSite(
-    () => ({ '/page': textOf('hello', 'text/html; charset=utf-8') }),
+  await withSiteAnswering(
+    () => ({ '/page': textAnswer('hello', 'text/html; charset=utf-8') }),
     async (origin) => {
       const isHtml = (contentType: string): boolean => contentType.includes('text/html')
 
@@ -66,8 +33,8 @@ void test('an OK answer of a wanted content type is read', async () => {
 })
 
 void test('an error status and an unwanted content type are no text', async () => {
-  await withSite(
-    () => ({ '/file': textOf('%PDF', 'application/pdf') }),
+  await withSiteAnswering(
+    () => ({ '/file': textAnswer('%PDF', 'application/pdf') }),
     async (origin) => {
       const isHtml = (contentType: string): boolean => contentType.includes('text/html')
 
@@ -78,8 +45,8 @@ void test('an error status and an unwanted content type are no text', async () =
 })
 
 void test('a redirect on the same site is followed to the address that answers', async () => {
-  await withSite(
-    () => ({ '/old': redirectTo('/new'), '/new': textOf('moved here') }),
+  await withSiteAnswering(
+    () => ({ '/old': redirectAnswer('/new'), '/new': textAnswer('moved here') }),
     async (origin) => {
       assert.deepEqual(await fetchSiteText(`${origin}/old`, 'text/plain', anyType), {
         url: `${origin}/new`,
@@ -90,8 +57,24 @@ void test('a redirect on the same site is followed to the address that answers',
 })
 
 void test('a redirect to an address that may end a session is never requested', async () => {
-  await withSite(
-    () => ({ '/docs': redirectTo('/session/logout'), '/session/logout': textOf('signed out') }),
+  await withSiteAnswering(
+    () => ({
+      '/docs': redirectAnswer('/session/logout'),
+      '/session/logout': textAnswer('signed out')
+    }),
+    async (origin, requested) => {
+      assert.equal(await fetchSiteText(`${origin}/docs`, 'text/plain', anyType), undefined)
+      assert.deepEqual(requested, ['/docs'])
+    }
+  )
+})
+
+void test('a redirect to an address that carries a password is never requested', async () => {
+  await withSiteAnswering(
+    (origin) => ({
+      '/docs': redirectAnswer(origin.replace('://', '://user:secret@') + '/private'),
+      '/private': textAnswer('for user')
+    }),
     async (origin, requested) => {
       assert.equal(await fetchSiteText(`${origin}/docs`, 'text/plain', anyType), undefined)
       assert.deepEqual(requested, ['/docs'])
@@ -100,11 +83,11 @@ void test('a redirect to an address that may end a session is never requested', 
 })
 
 void test('a redirect to another site is never requested', async () => {
-  await withSite(
-    () => ({ '/landing': textOf('another site') }),
+  await withSiteAnswering(
+    () => ({ '/landing': textAnswer('another site') }),
     async (otherOrigin, otherRequested) => {
-      await withSite(
-        () => ({ '/docs': redirectTo(`${otherOrigin}/landing`) }),
+      await withSiteAnswering(
+        () => ({ '/docs': redirectAnswer(`${otherOrigin}/landing`) }),
         async (origin) => {
           assert.equal(await fetchSiteText(`${origin}/docs`, 'text/plain', anyType), undefined)
           assert.deepEqual(otherRequested, [])
@@ -115,8 +98,8 @@ void test('a redirect to another site is never requested', async () => {
 })
 
 void test('a site that only ever redirects is given up on', async () => {
-  await withSite(
-    () => ({ '/loop': redirectTo('/loop') }),
+  await withSiteAnswering(
+    () => ({ '/loop': redirectAnswer('/loop') }),
     async (origin, requested) => {
       assert.equal(await fetchSiteText(`${origin}/loop`, 'text/plain', anyType), undefined)
       assert.equal(requested.length, 6)
@@ -126,7 +109,7 @@ void test('a site that only ever redirects is given up on', async () => {
 
 void test('an address that never answers is no text', async () => {
   let closedOrigin = ''
-  await withSite(
+  await withSiteAnswering(
     () => ({}),
     async (origin) => {
       closedOrigin = origin

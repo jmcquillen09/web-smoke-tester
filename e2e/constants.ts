@@ -34,20 +34,30 @@ export const SITE_PAGES_VARIABLE = 'E2E_SITE_PAGES'
 export const API_OPERATIONS_FILE_VARIABLE = 'E2E_API_OPERATIONS_FILE'
 export const API_PROJECT = 'api'
 
-// Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`.
+// Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`:
+// the usual addresses of a document, then of a Swagger UI or Redoc page.
 export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
   '/openapi.json',
   '/swagger.json',
   '/v3/api-docs',
   '/api-docs',
   '/api/openapi.json',
-  '/swagger/v1/swagger.json'
+  '/swagger/v1/swagger.json',
+  '/v2/api-docs',
+  '/docs',
+  '/redoc',
+  '/swagger',
+  '/api/docs'
 ]
+// How many addresses one Swagger UI or Redoc page, or its settings script, may send the runner to.
+export const DOCS_PAGE_LINK_LIMIT = 5
 // What the report shows on an API test the target's `expectedApiFailures` names.
 export const EXPECTED_API_FAILURE =
   'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'
-// Where an OpenAPI document keeps the schemas its responses point at with `$ref`.
+// Where an OpenAPI document keeps the schemas, parameters and responses a `$ref` points at.
 export const SCHEMA_REFERENCE = '#/components/schemas/'
+export const PARAMETER_REFERENCE = '#/components/parameters/'
+export const RESPONSE_REFERENCE = '#/components/responses/'
 // How a schema says it is written in JSON Schema 2020-12, the dialect of OpenAPI 3.1.
 export const JSON_SCHEMA_2020_12 = 'https://json-schema.org/draft/2020-12/schema'
 // The most operations one API run requests.

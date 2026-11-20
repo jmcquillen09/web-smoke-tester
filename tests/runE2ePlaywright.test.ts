@@ -45,7 +45,7 @@ void test('a site with no OpenAPI document is told so and still gets its web tes
     assert.equal(run.code, 0, run.output)
     assert.match(
       run.output,
-      /The site target has no OpenAPI 3 JSON document at: http:\/\/127\.0\.0\.1:\d+\/openapi\.yaml\./
+      /The site target has no OpenAPI or Swagger document at: http:\/\/127\.0\.0\.1:\d+\/openapi\.yaml\./
     )
     assert.match(run.output, /running the web tests only/)
     assert.match(run.output, WEB_TEST)

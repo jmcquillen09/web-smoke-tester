@@ -46,3 +46,12 @@ void test('an OpenAPI 3.1 schema is marked as JSON Schema 2020-12', () => {
 
   assert.equal(bundled['$schema'], 'https://json-schema.org/draft/2020-12/schema')
 })
+
+void test('a schema carries what a property points at, whatever keyword the property’s name spells', () => {
+  const schema = { type: 'object', properties: { enum: reference('Visit') } }
+
+  assert.deepEqual(bundleBodySchema(schema, SCHEMAS, '3.0.3'), {
+    allOf: [schema],
+    components: { schemas: { Visit: SCHEMAS['Visit'] } }
+  })
+})
