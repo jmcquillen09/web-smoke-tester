@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
-import type { AddressInfo } from 'node:net'
+
+import { withServerListening } from './withServerListening.ts'
 
 const HOST = '127.0.0.1'
 const PAGE = '<!doctype html><title>A site</title><h1>A site</h1>'
@@ -21,11 +22,5 @@ export const withSiteServing = async (
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(PAGE)
     }
   })
-  await new Promise<void>((resolve) => server.listen(0, HOST, resolve))
-  try {
-    await work(`http://${HOST}:${String((server.address() as AddressInfo).port)}`)
-  } finally {
-    server.closeAllConnections()
-    await new Promise<void>((resolve) => server.close(() => resolve()))
-  }
+  await withServerListening(server, 'http', HOST, work)
 }

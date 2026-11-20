@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:https'
-import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
 import { assertSiteAnswers } from '../e2e/assertSiteAnswers.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import { createSelfSignedCertificate } from './fixtures/createSelfSignedCertificate.ts'
+import { withServerListening } from './fixtures/withServerListening.ts'
 
 const HOST = 'localhost'
 
@@ -17,13 +17,7 @@ const withSelfSignedSite = async (
   const server = createServer(createSelfSignedCertificate(HOST), (_request, response) => {
     response.writeHead(status, { 'content-type': 'text/plain' }).end('answered')
   })
-  await new Promise<void>((resolve) => server.listen(0, HOST, resolve))
-  try {
-    await work(`https://${HOST}:${String((server.address() as AddressInfo).port)}`)
-  } finally {
-    server.closeAllConnections()
-    await new Promise<void>((resolve) => server.close(() => resolve()))
-  }
+  await withServerListening(server, 'https', HOST, work)
 }
 
 const settingsFor = (baseUrl: string) => ({ target: 'staging', baseUrl, paths: ['/start'] })
@@ -88,16 +82,12 @@ void test('a redirect is an answer, and where it leads is never requested', asyn
     requested.push(request.url ?? '')
     response.writeHead(302, { location: '/session/logout' }).end()
   })
-  await new Promise<void>((resolve) => server.listen(0, HOST, resolve))
-  const baseUrl = `https://${HOST}:${String((server.address() as AddressInfo).port)}`
-  try {
+
+  await withServerListening(server, 'https', HOST, async (baseUrl) => {
     await withSiteRequest({ ignoreHttpsErrors: true }, (siteRequest) =>
       assertSiteAnswers(settingsFor(baseUrl), siteRequest)
     )
 
     assert.deepEqual(requested, ['/start'])
-  } finally {
-    server.closeAllConnections()
-    await new Promise<void>((resolve) => server.close(() => resolve()))
-  }
+  })
 })

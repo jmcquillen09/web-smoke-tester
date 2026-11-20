@@ -6,6 +6,11 @@ import { planApiOperationsWithListedValues } from '../e2e/planApiOperationsWithL
 
 const DOCUMENT_URL = 'https://api.example/openapi.json'
 const OK = { '200': {} }
+// The lists of an API with one pet, 7, which has one visit, 3.
+const PET_SEVEN_WITH_VISIT_THREE = {
+  'https://api.example/pets': [{ id: 7 }],
+  'https://api.example/pets/7/visits': [{ id: 3 }]
+}
 
 const documentWith = (paths: OpenApiDocument['paths']): OpenApiDocument => ({
   openapi: '3.0.3',
@@ -172,10 +177,7 @@ void test('parameters declared innermost first are still filled outermost first'
       get: { parameters: [pathParameter('visitId'), pathParameter('petId')], responses: OK }
     }
   })
-  const api = apiOf({
-    'https://api.example/pets': [{ id: 7 }],
-    'https://api.example/pets/7/visits': [{ id: 3 }]
-  })
+  const api = apiOf(PET_SEVEN_WITH_VISIT_THREE)
 
   const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
 
@@ -240,10 +242,7 @@ void test('a list that becomes requestable only once another value is found is s
     },
     '/pets/{petId}/visits': { get: { parameters: [pathParameter('petId')], responses: OK } }
   })
-  const api = apiOf({
-    'https://api.example/pets': [{ id: 7 }],
-    'https://api.example/pets/7/visits': [{ id: 3 }]
-  })
+  const api = apiOf(PET_SEVEN_WITH_VISIT_THREE)
 
   const { plan } = await planApiOperationsWithListedValues(document, DOCUMENT_URL, api.fetchApiList)
 

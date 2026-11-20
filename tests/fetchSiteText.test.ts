@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { createServer, type ServerResponse } from 'node:http'
-import type { AddressInfo } from 'node:net'
 import test from 'node:test'
 
 import { fetchSiteText as fetchSiteTextWith } from '../e2e/fetchSiteText.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
+import { withServerListening } from './fixtures/withServerListening.ts'
 
 const HOST = '127.0.0.1'
 const anyType = (): boolean => true
@@ -45,15 +45,10 @@ const withSite = async (
     const answer = routes[path] ?? ((missing: ServerResponse) => missing.writeHead(404).end())
     answer(response)
   })
-  await new Promise<void>((resolve) => server.listen(0, HOST, resolve))
-  const origin = `http://${HOST}:${String((server.address() as AddressInfo).port)}`
-  routes = answers(origin)
-  try {
+  await withServerListening(server, 'http', HOST, async (origin) => {
+    routes = answers(origin)
     await work(origin, requested)
-  } finally {
-    server.closeAllConnections()
-    await new Promise<void>((resolve) => server.close(() => resolve()))
-  }
+  })
 }
 
 void test('an OK answer of a wanted content type is read', async () => {
