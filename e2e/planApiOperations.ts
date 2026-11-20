@@ -1,7 +1,12 @@
 import { z } from 'zod'
 import type { ApiOperation } from './ApiOperation.ts'
 import { bundleBodySchema } from './bundleBodySchema.ts'
-import { API_OPERATION_LIMIT, UNSAFE_LINK } from './constants.ts'
+import {
+  API_OPERATION_LIMIT,
+  PARAMETER_REFERENCE,
+  RESPONSE_REFERENCE,
+  UNSAFE_LINK
+} from './constants.ts'
 import { isSafeAddress } from './isSafeAddress.ts'
 import { isSitePath } from './isSitePath.ts'
 import { type JsonObject, JsonObjectSchema } from './JsonObject.ts'
@@ -55,9 +60,6 @@ type OpenApiResponse = Exclude<
   OpenApiReference
 >
 type OpenApiServers = OpenApiDocument['servers']
-
-const PARAMETER_REFERENCE = '#/components/parameters/'
-const RESPONSE_REFERENCE = '#/components/responses/'
 
 const API_KEY_SCHEME = 'apiKey'
 const NO_LISTED_VALUES: ReadonlyMap<string, string> = new Map()
