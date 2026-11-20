@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { DiscoveredOpenApiDocument } from '../e2e/discoverOpenApiDocument.ts'
 import { fetchOpenApiDocument as fetchOpenApiDocumentWith } from '../e2e/fetchOpenApiDocument.ts'
+import type { OpenApiDocumentSearch } from '../e2e/OpenApiDocumentSearch.ts'
 import { withSiteRequest } from '../e2e/withSiteRequest.ts'
 import { redirectAnswer } from './fixtures/redirectAnswer.ts'
 import { textAnswer } from './fixtures/textAnswer.ts'
@@ -14,7 +14,9 @@ const DOCUMENT = { openapi: '3.1.0', paths: { '/pets': { get: {} } } }
 const DOCUMENT_JSON = JSON.stringify(DOCUMENT)
 const SWAGGER_UI = `<div id="swagger-ui"></div><script src="./swagger-initializer.js"></script>`
 
-const fetchOpenApiDocument = (url: string): Promise<DiscoveredOpenApiDocument | undefined> =>
+const ABSENT = { kind: 'absent' }
+
+const fetchOpenApiDocument = (url: string): Promise<OpenApiDocumentSearch> =>
   withSiteRequest({ ignoreHttpsErrors: false }, (siteRequest) =>
     fetchOpenApiDocumentWith(siteRequest, url)
   )
@@ -24,6 +26,7 @@ void test('a document is read, whatever content type it is served as', async () 
     () => ({ '/openapi': textAnswer(DOCUMENT_JSON) }),
     async (origin) => {
       assert.deepEqual(await fetchOpenApiDocument(`${origin}/openapi`), {
+        kind: 'found',
         url: `${origin}/openapi`,
         document: DOCUMENT
       })
@@ -37,11 +40,17 @@ void test('a Swagger 2.0 document is read as an OpenAPI 3 one served from its ba
   await withSiteAnswering(
     () => ({ '/swagger.json': textAnswer(JSON.stringify(swagger), JSON_TYPE) }),
     async (origin) => {
-      const discovered = await fetchOpenApiDocument(`${origin}/swagger.json`)
-
-      assert.equal(discovered?.url, `${origin}/swagger.json`)
-      assert.deepEqual(discovered?.document.servers, [{ url: `${origin}/v2` }])
-      assert.deepEqual(Object.keys(discovered?.document.paths ?? {}), ['/pets'])
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/swagger.json`), {
+        kind: 'found',
+        url: `${origin}/swagger.json`,
+        document: {
+          openapi: '3.0.3',
+          servers: [{ url: `${origin}/v2` }],
+          security: [],
+          paths: { '/pets': { get: { parameters: [], responses: {} }, parameters: [] } },
+          components: { parameters: {}, schemas: {}, securitySchemes: {} }
+        }
+      })
     }
   )
 })
@@ -54,6 +63,7 @@ void test('a Redoc page leads to the document it names', async () => {
     }),
     async (origin) => {
       assert.deepEqual(await fetchOpenApiDocument(`${origin}/redoc`), {
+        kind: 'found',
         url: `${origin}/api/openapi.json`,
         document: DOCUMENT
       })
@@ -74,6 +84,7 @@ void test('a Swagger UI page leads to its document through its settings script, 
     }),
     async (origin, requested) => {
       assert.deepEqual(await fetchOpenApiDocument(`${origin}/swagger`), {
+        kind: 'found',
         url: `${origin}/swagger/v1/swagger.json`,
         document: DOCUMENT
       })
@@ -100,10 +111,11 @@ void test('an address in a settings script is read against the page that loads t
       '/docs/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
     }),
     async (origin) => {
-      assert.equal(
-        (await fetchOpenApiDocument(`${origin}/docs/index.html`))?.url,
-        `${origin}/docs/openapi.json`
-      )
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/docs/index.html`), {
+        kind: 'found',
+        url: `${origin}/docs/openapi.json`,
+        document: DOCUMENT
+      })
     }
   )
 })
@@ -117,12 +129,16 @@ void test('the first address a page names that answers with a document is the do
       '/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
     }),
     async (origin) => {
-      assert.equal((await fetchOpenApiDocument(`${origin}/docs`))?.url, `${origin}/openapi.json`)
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/docs`), {
+        kind: 'found',
+        url: `${origin}/openapi.json`,
+        document: DOCUMENT
+      })
     }
   )
 })
 
-void test('a document on another site is never requested', async () => {
+void test('a docs page that names a document on another site is reported, and that site never requested', async () => {
   await withSiteAnswering(
     () => ({ '/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE) }),
     async (otherOrigin, otherRequested) => {
@@ -131,7 +147,10 @@ void test('a document on another site is never requested', async () => {
           '/docs': textAnswer(`<redoc spec-url="${otherOrigin}/openapi.json"></redoc>`, HTML)
         }),
         async (origin, requested) => {
-          assert.equal(await fetchOpenApiDocument(`${origin}/docs`), undefined)
+          assert.deepEqual(await fetchOpenApiDocument(`${origin}/docs`), {
+            kind: 'docsPage',
+            url: `${origin}/docs`
+          })
           assert.deepEqual(requested, ['/docs'])
           assert.deepEqual(otherRequested, [])
         }
@@ -140,7 +159,7 @@ void test('a document on another site is never requested', async () => {
   )
 })
 
-void test('pages that only ever name another page are given up on', async () => {
+void test('pages that only ever name another page are given up on, and the first is reported', async () => {
   const pageNaming = (path: string): string =>
     `<script>SwaggerUIBundle({ url: "${path}" })</script>`
 
@@ -152,7 +171,10 @@ void test('pages that only ever name another page are given up on', async () => 
       '/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
     }),
     async (origin, requested) => {
-      assert.equal(await fetchOpenApiDocument(`${origin}/docs`), undefined)
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/docs`), {
+        kind: 'docsPage',
+        url: `${origin}/docs`
+      })
       assert.deepEqual(requested, ['/docs', '/docs/a', '/docs/b'])
     }
   )
@@ -164,9 +186,29 @@ void test('a page that is no docs page, and an address that answers with an erro
       '/': textAnswer('<h1>A site</h1><script>go({ url: "/openapi.json" })</script>', HTML)
     }),
     async (origin, requested) => {
-      assert.equal(await fetchOpenApiDocument(`${origin}/`), undefined)
-      assert.equal(await fetchOpenApiDocument(`${origin}/openapi.json`), undefined)
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/`), ABSENT)
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/openapi.json`), ABSENT)
       assert.deepEqual(requested, ['/', '/openapi.json'])
+    }
+  )
+})
+
+void test('a docs page that works its document’s address out in script is reported, after a redirect', async () => {
+  const settings =
+    'const address = location.origin + "/openapi.json"; window.ui = SwaggerUIBundle({ url: address })'
+
+  await withSiteAnswering(
+    () => ({
+      '/swagger': redirectAnswer('/swagger/index.html'),
+      '/swagger/index.html': textAnswer(SWAGGER_UI, HTML),
+      '/swagger/swagger-initializer.js': textAnswer(settings, 'application/javascript'),
+      '/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
+    }),
+    async (origin) => {
+      assert.deepEqual(await fetchOpenApiDocument(`${origin}/swagger`), {
+        kind: 'docsPage',
+        url: `${origin}/swagger/index.html`
+      })
     }
   )
 })

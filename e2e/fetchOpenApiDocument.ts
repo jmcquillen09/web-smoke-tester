@@ -3,11 +3,14 @@ import { DOCS_PAGE_FOLLOW_LIMIT } from './constants.ts'
 import type { DiscoveredOpenApiDocument } from './discoverOpenApiDocument.ts'
 import { extractOpenApiDocumentLinks } from './extractOpenApiDocumentLinks.ts'
 import { fetchSiteText } from './fetchSiteText.ts'
+import { isApiDocsPage } from './isApiDocsPage.ts'
 import type { OpenApiDocument } from './OpenApiDocument.ts'
+import type { OpenApiDocumentSearch } from './OpenApiDocumentSearch.ts'
 import { parseOpenApiDocument } from './parseOpenApiDocument.ts'
 
 // A document first, then the page that names one.
 const DOCUMENT_TYPES = 'application/json, text/html;q=0.8, */*;q=0.5'
+const ABSENT: OpenApiDocumentSearch = { kind: 'absent' }
 
 interface AddressAnswer {
   /** The address that answered, after redirects. */
@@ -55,16 +58,25 @@ const findLinkedDocument = async (
 
 // Fetches one address for the document discovery: an OpenAPI 3 or Swagger 2.0 document in JSON, or
 // the document a Swagger UI or Redoc page there names. Only an answer that ended on the
-// address's own site is read; an error status and a redirect elsewhere are no document.
+// address's own site is read; an error status and a redirect elsewhere are no document. A docs
+// page that leads to no document is reported as that, so the run can say what it found.
 export const fetchOpenApiDocument = async (
   siteRequest: APIRequestContext,
   url: string
-): Promise<DiscoveredOpenApiDocument | undefined> => {
+): Promise<OpenApiDocumentSearch> => {
   const answer = await readAddress(siteRequest, url)
   const hasAnswer = answer !== undefined
-  if (!hasAnswer) return undefined
+  if (!hasAnswer) return ABSENT
   const { document } = answer
   const hasDocument = document !== undefined
-  if (hasDocument) return { url: answer.url, document }
-  return findLinkedDocument(siteRequest, answer.text, answer.url, DOCS_PAGE_FOLLOW_LIMIT)
+  if (hasDocument) return { kind: 'found', url: answer.url, document }
+  const linked = await findLinkedDocument(
+    siteRequest,
+    answer.text,
+    answer.url,
+    DOCS_PAGE_FOLLOW_LIMIT
+  )
+  const hasLinkedDocument = linked !== undefined
+  if (hasLinkedDocument) return { kind: 'found', ...linked }
+  return isApiDocsPage(answer.text) ? { kind: 'docsPage', url: answer.url } : ABSENT
 }

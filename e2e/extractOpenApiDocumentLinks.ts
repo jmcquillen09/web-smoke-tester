@@ -1,10 +1,9 @@
 import { DOCS_PAGE_LINK_LIMIT } from './constants.ts'
+import { isApiDocsPage } from './isApiDocsPage.ts'
 import { isSafeAddress } from './isSafeAddress.ts'
 
-// What marks a text as a Swagger UI or Redoc page, or as the script that sets one up.
-const DOCS_PAGE = /swagger-?ui|redoc/i
-// Where such a page names the document it shows: Redoc's `spec-url` attribute and `Redoc.init`
-// argument, Swagger UI's `url` and `urls` settings, and the script Swagger UI keeps them in.
+// Where a docs page names its document: Redoc's `spec-url` attribute and `Redoc.init` argument,
+// Swagger UI's `url` and `urls` settings, and the script Swagger UI keeps them in.
 const DOCUMENT_LINKS: readonly RegExp[] = [
   /\bspec-url\s*=\s*["']([^"']+)["']/gi,
   /\bRedoc\.init\(\s*["']([^"']+)["']/g,
@@ -16,7 +15,7 @@ const DOCUMENT_LINKS: readonly RegExp[] = [
 // way of naming one and without repeats, up to DOCS_PAGE_LINK_LIMIT. Any other text names none. An
 // address on another site, and one a read-only run must not request (UNSAFE_LINK), is dropped.
 export const extractOpenApiDocumentLinks = (text: string, pageUrl: string): string[] => {
-  const isDocsPage = DOCS_PAGE.test(text)
+  const isDocsPage = isApiDocsPage(text)
   if (!isDocsPage) return []
   const page = new URL(pageUrl)
   const links = new Set<string>()

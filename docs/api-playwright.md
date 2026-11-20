@@ -140,6 +140,10 @@ A YAML document is no document.
   than `DOCS_PAGE_FOLLOW_LIMIT` steps from the address it started at. A text that names neither
   Swagger UI nor Redoc sends the runner nowhere. Only an address written out is found: the runner
   runs no script, so a page that works its document's address out in one needs `apiSpecPath`.
+- **A docs page that leads to no document is named in the error**, in place of the list of
+  addresses tried: the run says where the page is, why a run may not have reached its document (an
+  address worked out in script, one on another site, or one that did not answer with a document),
+  and to set `apiSpecPath` to the address the page loads.
 - **A redirect is followed only on the same site** and never to an address `UNSAFE_LINK` matches
   ([`e2e/fetchSiteText.ts`](../e2e/fetchSiteText.ts)); a redirect to another site is no document.
 
