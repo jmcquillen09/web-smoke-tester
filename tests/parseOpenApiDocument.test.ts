@@ -4,6 +4,8 @@ import test from 'node:test'
 import { parseOpenApiDocument } from '../e2e/parseOpenApiDocument.ts'
 import { planApiOperations } from '../e2e/planApiOperations.ts'
 
+const DOCUMENT_URL = 'https://api.example/swagger.json'
+
 const SWAGGER = {
   swagger: '2.0',
   host: 'api.example',
@@ -50,14 +52,14 @@ void test('an OpenAPI 3 document is read from JSON', () => {
     }
   }
 
-  assert.deepEqual(parseOpenApiDocument(JSON.stringify(document)), document)
+  assert.deepEqual(parseOpenApiDocument(JSON.stringify(document), DOCUMENT_URL), document)
 })
 
 void test('a Swagger 2.0 document plans the requests the OpenAPI 3 document that says the same would', () => {
-  const document = parseOpenApiDocument(JSON.stringify(SWAGGER))
+  const document = parseOpenApiDocument(JSON.stringify(SWAGGER), DOCUMENT_URL)
   assert.ok(document !== undefined)
 
-  const plan = planApiOperations(document, 'https://api.example/swagger.json')
+  const plan = planApiOperations(document, DOCUMENT_URL)
 
   assert.deepEqual(plan.operations, [
     {
@@ -91,16 +93,39 @@ void test('a Swagger 2.0 document plans the requests the OpenAPI 3 document that
 })
 
 void test('a text that holds no document is none', () => {
-  assert.equal(parseOpenApiDocument('<!doctype html><title>Docs</title>'), undefined)
-  assert.equal(parseOpenApiDocument('{"swagger":"1.2","apis":[]}'), undefined)
-  assert.equal(parseOpenApiDocument('openapi: 3.0.3\npaths: [unclosed'), undefined)
-  assert.equal(parseOpenApiDocument(''), undefined)
+  assert.equal(parseOpenApiDocument('<!doctype html><title>Docs</title>', DOCUMENT_URL), undefined)
+  assert.equal(parseOpenApiDocument('{"swagger":"1.2","apis":[]}', DOCUMENT_URL), undefined)
+  assert.equal(parseOpenApiDocument('openapi: 3.0.3\npaths: [unclosed', DOCUMENT_URL), undefined)
+  assert.equal(parseOpenApiDocument('', DOCUMENT_URL), undefined)
 })
 
 void test('a Swagger 2.0 document with a malformed operation is no document', () => {
   const malformed = { swagger: '2.0', paths: { '/pets': { get: { parameters: 'petId' } } } }
   const unnamed = { swagger: '2.0', paths: { '/pets': { get: { parameters: [{ in: 'query' }] } } } }
 
-  assert.equal(parseOpenApiDocument(JSON.stringify(malformed)), undefined)
-  assert.equal(parseOpenApiDocument(JSON.stringify(unnamed)), undefined)
+  assert.equal(parseOpenApiDocument(JSON.stringify(malformed), DOCUMENT_URL), undefined)
+  assert.equal(parseOpenApiDocument(JSON.stringify(unnamed), DOCUMENT_URL), undefined)
+})
+
+void test('an operation a Swagger 2.0 document serves over another scheme than its own is not requested', () => {
+  const swagger = {
+    swagger: '2.0',
+    schemes: ['http'],
+    paths: { '/pets': { get: {} }, '/orders': { get: { schemes: ['https'] } } }
+  }
+  const document = parseOpenApiDocument(JSON.stringify(swagger), DOCUMENT_URL)
+  assert.ok(document !== undefined)
+
+  const plan = planApiOperations(document, DOCUMENT_URL)
+
+  assert.deepEqual(
+    plan.operations.map((operation) => operation.url),
+    ['https://api.example/orders']
+  )
+  assert.deepEqual(plan.skipped, [
+    {
+      path: '/pets',
+      reason: "the document's server http://api.example is another site than the document's"
+    }
+  ])
 })

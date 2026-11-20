@@ -111,47 +111,62 @@ const asOpenApiResponses = (
   )
 }
 
-const asOpenApiOperation = (operation: SwaggerOperation, swagger: SwaggerDocument): JsonObject => {
-  const { security } = operation
+// One server for each of `schemes`, at the document's host and base path. The scheme and host of
+// the address that served the document stand in for the ones it leaves out.
+const serversOf = (
+  swagger: SwaggerDocument,
+  schemes: readonly string[],
+  documentUrl: URL
+): JsonObject[] => {
+  const { host = documentUrl.host, basePath = '/' } = swagger
+  const hasSchemes = schemes.length > 0
+  const offered = hasSchemes ? schemes : [documentUrl.protocol.replace(':', '')]
+  return offered.map((scheme) => ({ url: `${scheme}://${host}${basePath}` }))
+}
+
+// An operation that names its own schemes is served from them, in place of the document's.
+const asOpenApiOperation = (
+  operation: SwaggerOperation,
+  swagger: SwaggerDocument,
+  documentUrl: URL
+): JsonObject => {
+  const { security, schemes } = operation
   const hasOwnSecurity = security !== undefined
+  const hasOwnSchemes = schemes !== undefined
   return {
     parameters: asOpenApiParameters(operation.parameters),
     responses: asOpenApiResponses(operation, swagger.responses ?? {}, swagger.produces ?? []),
-    ...(hasOwnSecurity ? { security } : {})
+    ...(hasOwnSecurity ? { security } : {}),
+    ...(hasOwnSchemes ? { servers: serversOf(swagger, schemes, documentUrl) } : {})
   }
 }
 
-const asOpenApiPathItem = (item: SwaggerPathItem, swagger: SwaggerDocument): JsonObject => {
+const asOpenApiPathItem = (
+  item: SwaggerPathItem,
+  swagger: SwaggerDocument,
+  documentUrl: URL
+): JsonObject => {
   const { get: operation } = item
   const hasGetOperation = operation !== undefined
   return {
     parameters: asOpenApiParameters(item.parameters),
-    ...(hasGetOperation ? { get: asOpenApiOperation(operation, swagger) } : {})
+    ...(hasGetOperation ? { get: asOpenApiOperation(operation, swagger, documentUrl) } : {})
   }
 }
 
-// One server for each scheme the document names, at its host and base path; the document's own
-// scheme and host stand in for the ones it leaves out.
-const serversOf = (swagger: SwaggerDocument): JsonObject[] => {
-  const { host = '', basePath = '/', schemes = [] } = swagger
-  const hasHost = host !== ''
-  if (!hasHost) return [{ url: basePath }]
-  const address = `//${host}${basePath}`
-  const hasSchemes = schemes.length > 0
-  return hasSchemes
-    ? schemes.map((scheme) => ({ url: `${scheme}:${address}` }))
-    : [{ url: address }]
-}
-
-// A Swagger 2.0 document as the OpenAPI 3 document that says the same, for `OpenApiDocumentSchema`
-// to read: only the parts a run reads are carried over. A shared response is written out in each
-// operation that points at it, so the document's own `responses` have no counterpart.
-export const convertSwaggerDocument = (swagger: SwaggerDocument): JsonObject => {
+// A Swagger 2.0 document, served from `documentAddress`, as the OpenAPI 3 document that says the
+// same, for `OpenApiDocumentSchema` to read: only the parts a run reads are carried over. A shared
+// response is written out in each operation that points at it, so `responses` has no counterpart.
+export const convertSwaggerDocument = (
+  swagger: SwaggerDocument,
+  documentAddress: string
+): JsonObject => {
+  const documentUrl = new URL(documentAddress)
   return {
     openapi: OPENAPI_VERSION,
-    servers: serversOf(swagger),
+    servers: serversOf(swagger, swagger.schemes ?? [], documentUrl),
     security: swagger.security ?? [],
-    paths: mapValues(swagger.paths, (item) => asOpenApiPathItem(item, swagger)),
+    paths: mapValues(swagger.paths, (item) => asOpenApiPathItem(item, swagger, documentUrl)),
     components: {
       parameters: mapValues(swagger.parameters ?? {}, (parameter) =>
         convertEntry(parameter, asOpenApiParameter)

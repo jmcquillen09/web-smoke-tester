@@ -124,7 +124,9 @@ A YAML document is no document.
 
 - **A Swagger 2.0 document is read as the OpenAPI 3 document that says the same**
   ([`e2e/convertSwaggerDocument.ts`](../e2e/convertSwaggerDocument.ts)), so every rule on this page
-  holds for it. Its `host`, `basePath` and `schemes` are its servers, one for each scheme; a
+  holds for it. Its `host`, `basePath` and `schemes` are its servers, one for each scheme, with the
+  host and scheme of the address that served the document standing in for one it leaves out, and an
+  operation's own `schemes` are that operation's servers; a
   parameter's own `default`, `enum` and `x-example` are its example values; a response's `schema`
   is its body in each content type the operation's `produces`, else the document's, names (any
   content type when neither names one); and its schemas are read as OpenAPI 3.0 schemas, with

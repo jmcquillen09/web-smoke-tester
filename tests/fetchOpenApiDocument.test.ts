@@ -40,7 +40,7 @@ void test('a Swagger 2.0 document is read as an OpenAPI 3 one served from its ba
       const discovered = await fetchOpenApiDocument(`${origin}/swagger.json`)
 
       assert.equal(discovered?.url, `${origin}/swagger.json`)
-      assert.deepEqual(discovered?.document.servers, [{ url: '/v2' }])
+      assert.deepEqual(discovered?.document.servers, [{ url: `${origin}/v2` }])
       assert.deepEqual(Object.keys(discovered?.document.paths ?? {}), ['/pets'])
     }
   )

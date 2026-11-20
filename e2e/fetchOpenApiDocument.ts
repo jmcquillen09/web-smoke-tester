@@ -24,7 +24,7 @@ const readAddress = async (
   const answer = await fetchSiteText(siteRequest, url, DOCUMENT_TYPES, () => true)
   const hasAnswer = answer !== undefined
   if (!hasAnswer) return undefined
-  const document = parseOpenApiDocument(answer.text)
+  const document = parseOpenApiDocument(answer.text, answer.url)
   const hasDocument = document !== undefined
   return hasDocument ? { ...answer, document } : answer
 }

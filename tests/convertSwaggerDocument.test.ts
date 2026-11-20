@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { convertSwaggerDocument } from '../e2e/convertSwaggerDocument.ts'
+import type { JsonObject } from '../e2e/JsonObject.ts'
 import { type SwaggerDocument, SwaggerDocumentSchema } from '../e2e/SwaggerDocument.ts'
 
 const NO_COMPONENTS = { parameters: {}, schemas: {}, securitySchemes: {} }
@@ -12,11 +13,16 @@ const answering = (responses: object): object => ({
   get: { parameters: [], responses }
 })
 
+const DOCUMENT_URL = 'http://docs.example:8080/v1/swagger.json'
+
+const convert = (swagger: SwaggerDocument): JsonObject =>
+  convertSwaggerDocument(swagger, DOCUMENT_URL)
+
 const swaggerOf = (parts: object): SwaggerDocument =>
   SwaggerDocumentSchema.parse({ swagger: '2.0', paths: {}, ...parts })
 
 void test('the host, base path and schemes become one server for each scheme', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({ host: 'api.example:8443', basePath: '/v2', schemes: ['https', 'http'] })
   )
 
@@ -26,20 +32,40 @@ void test('the host, base path and schemes become one server for each scheme', (
   ])
 })
 
-void test('a document that names no scheme or no host leaves them to its own address', () => {
-  assert.deepEqual(
-    convertSwaggerDocument(swaggerOf({ host: 'api.example', basePath: '/v2' }))['servers'],
-    [{ url: '//api.example/v2' }]
+void test('the address that served the document stands in for the scheme and host it leaves out', () => {
+  assert.deepEqual(convert(swaggerOf({ host: 'api.example', basePath: '/v2' }))['servers'], [
+    { url: 'http://api.example/v2' }
+  ])
+  assert.deepEqual(convert(swaggerOf({ basePath: '/v2', schemes: ['https'] }))['servers'], [
+    { url: 'https://docs.example:8080/v2' }
+  ])
+  assert.deepEqual(convert(swaggerOf({}))['servers'], [{ url: 'http://docs.example:8080/' }])
+})
+
+void test('an operation that names its own schemes is served from them', () => {
+  const converted = convert(
+    swaggerOf({
+      host: 'api.example',
+      schemes: ['http'],
+      paths: { '/pets': { get: { schemes: ['https', 'wss'] } } }
+    })
   )
-  assert.deepEqual(
-    convertSwaggerDocument(swaggerOf({ basePath: '/v2', schemes: ['https'] }))['servers'],
-    [{ url: '/v2' }]
-  )
-  assert.deepEqual(convertSwaggerDocument(swaggerOf({}))['servers'], [{ url: '/' }])
+
+  assert.deepEqual(converted['servers'], [{ url: 'http://api.example/' }])
+  assert.deepEqual(converted['paths'], {
+    '/pets': {
+      parameters: [],
+      get: {
+        parameters: [],
+        responses: {},
+        servers: [{ url: 'https://api.example/' }, { url: 'wss://api.example/' }]
+      }
+    }
+  })
 })
 
 void test('a parameter’s own default, enum and x-example become its schema and example', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       paths: {
         '/pets': {
@@ -84,7 +110,7 @@ void test('a parameter’s own default, enum and x-example become its schema and
 
 void test('a response’s schema is its body in each content type the operation answers in', () => {
   const pets = { type: 'array', items: { type: 'string' } }
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       produces: ['application/json'],
       paths: {
@@ -105,7 +131,7 @@ void test('a response’s schema is its body in each content type the operation 
 })
 
 void test('a body in a document that names no content type may come in any', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       paths: { '/pets': { get: { responses: { '200': { schema: { type: 'array' } } } } } }
     })
@@ -119,7 +145,7 @@ void test('a body in a document that names no content type may come in any', () 
 void test('a shared response is written out in the content types of each operation that points at it', () => {
   const pets = { type: 'array' }
   const shared = { $ref: '#/responses/Pets' }
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       produces: ['application/json'],
       responses: { Pets: { schema: pets } },
@@ -138,7 +164,7 @@ void test('a shared response is written out in the content types of each operati
 })
 
 void test('a property keeps its name, whatever keyword it spells', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       definitions: {
         Flag: {
@@ -165,7 +191,7 @@ void test('a property keeps its name, whatever keyword it spells', () => {
 })
 
 void test('every other $ref points at where an OpenAPI 3 document keeps the definition', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       paths: {
         '/pets/{petId}': {
@@ -207,7 +233,7 @@ void test('every other $ref points at where an OpenAPI 3 document keeps the defi
 })
 
 void test('a schema’s x-nullable is the nullable an OpenAPI 3.0 schema writes', () => {
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       definitions: { Pet: { properties: { name: { type: 'string', 'x-nullable': true } } } }
     })
@@ -223,7 +249,7 @@ void test('a schema’s x-nullable is the nullable an OpenAPI 3.0 schema writes'
 void test('security is carried over, an operation’s own only where it names one', () => {
   const security = [{ key: [] }]
   const securityDefinitions = { key: { type: 'apiKey', in: 'query', name: 'api_key' } }
-  const converted = convertSwaggerDocument(
+  const converted = convert(
     swaggerOf({
       security,
       securityDefinitions,

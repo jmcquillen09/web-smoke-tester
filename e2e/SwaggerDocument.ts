@@ -6,6 +6,8 @@ const SwaggerEntriesSchema = z.record(z.string(), JsonObjectSchema)
 const SwaggerOperationSchema = z.object({
   /** The content types the operation answers in, in place of the document's. */
   produces: z.array(z.string()).optional(),
+  /** The schemes the operation is served over, in place of the document's. */
+  schemes: z.array(z.string()).optional(),
   parameters: z.array(JsonObjectSchema).optional(),
   responses: SwaggerEntriesSchema.optional(),
   security: z.json().optional()
@@ -20,7 +22,7 @@ const SwaggerPathItemSchema = z.object({
 // from. What a parameter, response or schema holds is read once converted, by `OpenApiDocumentSchema`.
 export const SwaggerDocumentSchema = z.object({
   swagger: z.literal('2.0'),
-  /** The API's host, with its port; absent when the API is on the document's own host. */
+  /** The API's host, with its port; absent when the API is on the host that serves the document. */
   host: z.string().optional(),
   /** The path every operation's path follows. */
   basePath: z.string().optional(),
