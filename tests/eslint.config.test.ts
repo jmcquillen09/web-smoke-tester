@@ -7,7 +7,7 @@ import { ESLint } from 'eslint'
 const repoRoot = path.join(import.meta.dirname, '..')
 
 // The rules read types, so the linted text takes the path of a file tsconfig.json includes.
-const lintedFilePath = path.join(repoRoot, 'tests/eslintConfig.test.ts')
+const lintedFilePath = path.join(repoRoot, 'tests/eslint.config.test.ts')
 
 const findReportedRuleIds = async (sourceText: string): Promise<readonly string[]> => {
   const eslint = new ESLint({ cwd: repoRoot })
