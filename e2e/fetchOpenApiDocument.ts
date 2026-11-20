@@ -1,5 +1,4 @@
 import type { APIRequestContext } from '@playwright/test'
-import { DOCS_PAGE_FOLLOW_LIMIT } from './constants.ts'
 import type { DiscoveredOpenApiDocument } from './discoverOpenApiDocument.ts'
 import { extractOpenApiDocumentLinks } from './extractOpenApiDocumentLinks.ts'
 import { fetchSiteText } from './fetchSiteText.ts'
@@ -20,11 +19,14 @@ interface AddressAnswer {
   readonly document?: OpenApiDocument
 }
 
+const fetchText = (siteRequest: APIRequestContext, url: string): ReturnType<typeof fetchSiteText> =>
+  fetchSiteText(siteRequest, url, DOCUMENT_TYPES, () => true)
+
 const readAddress = async (
   siteRequest: APIRequestContext,
   url: string
 ): Promise<AddressAnswer | undefined> => {
-  const answer = await fetchSiteText(siteRequest, url, DOCUMENT_TYPES, () => true)
+  const answer = await fetchText(siteRequest, url)
   const hasAnswer = answer !== undefined
   if (!hasAnswer) return undefined
   const document = parseOpenApiDocument(answer.text, answer.url)
@@ -32,26 +34,41 @@ const readAddress = async (
   return hasDocument ? { ...answer, document } : answer
 }
 
-// The first document the addresses `text` names lead to. An address is read against `pageUrl`, as
-// a browser reads one in a script the page loads, wherever that script is served from.
+// The first of `urls` that answers with a document. One that answers with anything else, another
+// page included, is passed over.
+const findDocumentAt = async (
+  siteRequest: APIRequestContext,
+  urls: readonly string[]
+): Promise<DiscoveredOpenApiDocument | undefined> => {
+  for (const url of urls) {
+    const answer = await readAddress(siteRequest, url)
+    const document = answer?.document
+    const hasDocument = answer !== undefined && document !== undefined
+    if (hasDocument) return { url: answer.url, document }
+  }
+  return undefined
+}
+
+// The document a docs page names: in the page itself, else in a settings script it loads. An
+// address in such a script is read against the page, as a browser reads it.
 const findLinkedDocument = async (
   siteRequest: APIRequestContext,
-  text: string,
-  pageUrl: string,
-  followsLeft: number
+  page: Pick<AddressAnswer, 'url' | 'text'>
 ): Promise<DiscoveredOpenApiDocument | undefined> => {
-  const mayFollow = followsLeft > 0
-  if (!mayFollow) return undefined
-  for (const link of extractOpenApiDocumentLinks(text, pageUrl)) {
-    const answer = await readAddress(siteRequest, link)
-    const hasAnswer = answer !== undefined
-    if (!hasAnswer) continue
-    const { url, document } = answer
-    const hasDocument = document !== undefined
-    if (hasDocument) return { url, document }
-    const linked = await findLinkedDocument(siteRequest, answer.text, pageUrl, followsLeft - 1)
-    const hasLinkedDocument = linked !== undefined
-    if (hasLinkedDocument) return linked
+  const links = extractOpenApiDocumentLinks(page.text, page.url)
+  const named = await findDocumentAt(siteRequest, links.documents)
+  const hasNamedDocument = named !== undefined
+  if (hasNamedDocument) return named
+  for (const scriptUrl of links.scripts) {
+    const script = await fetchText(siteRequest, scriptUrl)
+    const hasScript = script !== undefined
+    if (!hasScript) continue
+    const inScript = await findDocumentAt(
+      siteRequest,
+      extractOpenApiDocumentLinks(script.text, page.url).documents
+    )
+    const hasScriptDocument = inScript !== undefined
+    if (hasScriptDocument) return inScript
   }
   return undefined
 }
@@ -68,12 +85,7 @@ export const fetchOpenApiDocument = async (
   const { document } = answer
   const hasDocument = document !== undefined
   if (hasDocument) return { kind: 'found', url: answer.url, document }
-  const linked = await findLinkedDocument(
-    siteRequest,
-    answer.text,
-    answer.url,
-    DOCS_PAGE_FOLLOW_LIMIT
-  )
+  const linked = await findLinkedDocument(siteRequest, answer)
   const hasLinkedDocument = linked !== undefined
   if (hasLinkedDocument) return { kind: 'found', ...linked }
   return isApiDocsPage(answer.text) ? { kind: 'docsPage', url: answer.url } : ABSENT

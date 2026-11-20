@@ -135,11 +135,11 @@ A YAML document is no document.
   ([`e2e/extractOpenApiDocumentLinks.ts`](../e2e/extractOpenApiDocumentLinks.ts)). The runner
   requests the addresses the page names as its document: Redoc's `spec-url` attribute and
   `Redoc.init` argument, Swagger UI's `url` and `urls` settings, and the `swagger-initializer.js`
-  script Swagger UI keeps those settings in. It requests at most `DOCS_PAGE_LINK_LIMIT` addresses
-  from one page, only on the page's own site, never one that `UNSAFE_LINK` matches or that carries a user name or
-  password, and goes no more
-  than `DOCS_PAGE_FOLLOW_LIMIT` steps from the address it started at. A text that names neither
-  Swagger UI nor Redoc sends the runner nowhere. Only an address written out is found: the runner
+  script Swagger UI keeps those settings in, whose addresses are read against the page as a browser
+  reads them. It requests at most `DOCS_PAGE_LINK_LIMIT` addresses from one page or script, only on
+  the page's own site, and never one that `UNSAFE_LINK` matches or that carries a user name or
+  password. An address that answers with another page is not read as a docs page in turn, and a
+  text that names neither Swagger UI nor Redoc sends the runner nowhere. Only an address written out is found: the runner
   runs no script, so a page that works its document's address out in one needs `apiSpecPath`.
 - **A docs page that leads to no document is named in the error**, in place of the list of
   addresses tried: the run says where the page is, why a run may not have reached its document (an

@@ -49,10 +49,8 @@ export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
   '/swagger',
   '/api/docs'
 ]
-// How many addresses one Swagger UI or Redoc page may send the runner to, and how many such steps
-// lead from a page to its document (the page, then the script that holds its settings).
+// How many addresses one Swagger UI or Redoc page, or its settings script, may send the runner to.
 export const DOCS_PAGE_LINK_LIMIT = 5
-export const DOCS_PAGE_FOLLOW_LIMIT = 2
 // What the report shows on an API test the target's `expectedApiFailures` names.
 export const EXPECTED_API_FAILURE =
   'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'

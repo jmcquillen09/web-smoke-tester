@@ -159,15 +159,14 @@ void test('a docs page that names a document on another site is reported, and th
   )
 })
 
-void test('pages that only ever name another page are given up on, and the first is reported', async () => {
+void test('an address that answers with another page is not read as a docs page in turn', async () => {
   const pageNaming = (path: string): string =>
     `<script>SwaggerUIBundle({ url: "${path}" })</script>`
 
   await withSiteAnswering(
     () => ({
       '/docs': textAnswer(pageNaming('/docs/a'), HTML),
-      '/docs/a': textAnswer(pageNaming('/docs/b'), HTML),
-      '/docs/b': textAnswer(pageNaming('/openapi.json'), HTML),
+      '/docs/a': textAnswer(pageNaming('/openapi.json'), HTML),
       '/openapi.json': textAnswer(DOCUMENT_JSON, JSON_TYPE)
     }),
     async (origin, requested) => {
@@ -175,7 +174,7 @@ void test('pages that only ever name another page are given up on, and the first
         kind: 'docsPage',
         url: `${origin}/docs`
       })
-      assert.deepEqual(requested, ['/docs', '/docs/a', '/docs/b'])
+      assert.deepEqual(requested, ['/docs', '/docs/a'])
     }
   )
 })
