@@ -8,6 +8,7 @@ import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
+import { listTestsArguments } from './fixtures/listTestsArguments.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
@@ -62,7 +63,7 @@ void test('an expected failure the run does not request is reported and ignored,
     })
   )
 
-  const run = await runApiRunner(targetsFile, ['--list'])
+  const run = await runApiRunner(targetsFile, listTestsArguments)
 
   assert.equal(run.code, 0, run.output)
   assert.match(
@@ -98,7 +99,7 @@ void test('a site whose document has no operation a run can request fails an API
   await withSiteServing({ '/openapi.json': document }, async (baseUrl) => {
     const run = await runApiRunner(
       writeTargetsFile(JSON.stringify({ defaultTarget: 'demo', targets: { demo: { baseUrl } } })),
-      ['--list']
+      listTestsArguments
     )
 
     assert.equal(run.code, 1)

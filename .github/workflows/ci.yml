@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   checks:
@@ -28,8 +29,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@studnicky'
+      # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run typecheck
+      - run: npm run lint
       # Windows checks files out with CRLF line endings, which Prettier reports on every file.
       - if: runner.os == 'Linux'
         run: npm run format:check
@@ -45,7 +52,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@studnicky'
+      # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e-playwright -- demo-site --browser=chrome,firefox,safari
       - if: ${{ !cancelled() }}
@@ -70,7 +82,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@studnicky'
+      # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - env:
           CI_JOBS: ${{ toJSON(needs) }}
         run: node scripts/ciGate.ts

@@ -10,6 +10,7 @@ import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
 import { API_OPERATIONS_FILE_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { writeApiOperationsFile } from '../e2e/writeApiOperationsFile.ts'
+import { listTestsArguments } from './fixtures/listTestsArguments.ts'
 import { runNodeScript } from './fixtures/runNodeScript.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
@@ -28,7 +29,7 @@ const targetsFileFor = (port: number): string =>
 // Runs the site runner with `--list`, which has Playwright name the tests without opening a browser,
 // and resolves with its exit code and everything it printed.
 const listSiteTests = (targetsFile: string): Promise<{ code: number; output: string }> =>
-  runNodeScript([RUNNER, 'demo', '--list'], {
+  runNodeScript([RUNNER, 'demo', ...listTestsArguments], {
     [TARGETS_FILE_VARIABLE]: targetsFile,
     // Left over from another run: a web run must not pick these up.
     [API_OPERATIONS_FILE_VARIABLE]: writeApiOperationsFile(
