@@ -395,3 +395,5 @@ no live site: target resolution, the targets file, browser choices, link extract
 order and limits, the stage runners and the uncaught-error check.
 `npm run typecheck` typechecks everything Node runs, and `npm run lint` runs the ESLint rules
 [`eslint.config.mjs`](../eslint.config.mjs) enables over the same files.
+`npm run duplication` fails on a copy-pasted block of TypeScript, JavaScript or YAML that `origin/main` does
+not hold.

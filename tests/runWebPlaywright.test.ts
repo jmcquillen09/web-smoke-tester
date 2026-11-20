@@ -8,15 +8,14 @@ import test from 'node:test'
 import { demoSite } from '../demo/demoSite.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
-import { API_OPERATIONS_FILE_VARIABLE, TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
+import { API_OPERATIONS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { writeApiOperationsFile } from '../e2e/writeApiOperationsFile.ts'
 import { listTestsArguments } from './fixtures/listTestsArguments.ts'
-import { runNodeScript } from './fixtures/runNodeScript.ts'
+import { runPlaywrightRunner } from './fixtures/runPlaywrightRunner.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
-const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runWebPlaywright.ts')
 
 const targetsFileFor = (port: number): string =>
   writeTargetsFile(
@@ -29,8 +28,7 @@ const targetsFileFor = (port: number): string =>
 // Runs the site runner with `--list`, which has Playwright name the tests without opening a browser,
 // and resolves with its exit code and everything it printed.
 const listSiteTests = (targetsFile: string): Promise<{ code: number; output: string }> =>
-  runNodeScript([RUNNER, 'demo', ...listTestsArguments], {
-    [TARGETS_FILE_VARIABLE]: targetsFile,
+  runPlaywrightRunner('runWebPlaywright.ts', targetsFile, ['demo', ...listTestsArguments], {
     // Left over from another run: a web run must not pick these up.
     [API_OPERATIONS_FILE_VARIABLE]: writeApiOperationsFile(
       mkdtempSync(path.join(tmpdir(), 'left-over-operations-')),

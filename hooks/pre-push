@@ -1,0 +1,5 @@
+#!/bin/sh
+# Blocks a push whose code holds a copy-pasted block origin/main does not.
+# A hook can inherit git's own location from a linked worktree; npm's children must find theirs.
+unset GIT_DIR GIT_WORK_TREE
+exec npm run duplication

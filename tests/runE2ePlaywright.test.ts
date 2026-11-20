@@ -1,16 +1,13 @@
 import assert from 'node:assert/strict'
-import path from 'node:path'
 import test from 'node:test'
 
-import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { listTestsArguments } from './fixtures/listTestsArguments.ts'
-import { runNodeScript } from './fixtures/runNodeScript.ts'
+import { runPlaywrightRunner } from './fixtures/runPlaywrightRunner.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
-const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runE2ePlaywright.ts')
 const WEB_TEST = /\[isolated-chrome\] › /
 const API_TEST = /\[api\] › /
 
@@ -20,7 +17,7 @@ const targetsFileWith = (target: object): string =>
 // Runs the combined runner with `--list`, which has Playwright name the tests without opening a
 // browser, and resolves with its exit code and everything it printed.
 const listTests = (targetsFile: string): Promise<{ code: number; output: string }> =>
-  runNodeScript([RUNNER, 'site', ...listTestsArguments], { [TARGETS_FILE_VARIABLE]: targetsFile })
+  runPlaywrightRunner('runE2ePlaywright.ts', targetsFile, ['site', ...listTestsArguments])
 
 void test('a run against a site with an OpenAPI document holds its web tests and its API tests', async () => {
   const port = await findFreePort()

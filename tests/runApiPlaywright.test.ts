@@ -1,27 +1,24 @@
 import assert from 'node:assert/strict'
 import type { AddressInfo } from 'node:net'
-import path from 'node:path'
 import test from 'node:test'
 
 import { demoApi } from '../demo/demoApi.ts'
 import { startDemoServer } from '../demo/startDemoServer.ts'
 import { stopDemoServer } from '../demo/stopDemoServer.ts'
-import { TARGETS_FILE_VARIABLE } from '../e2e/constants.ts'
 import { withSiteServing } from './fixtures/withSiteServing.ts'
 import { listTestsArguments } from './fixtures/listTestsArguments.ts'
-import { runNodeScript } from './fixtures/runNodeScript.ts'
+import { runPlaywrightRunner } from './fixtures/runPlaywrightRunner.ts'
 import { writeTargetsFile } from './fixtures/writeTargetsFile.ts'
 import { findFreePort } from './fixtures/findFreePort.ts'
 
 const HOST = '127.0.0.1'
-const RUNNER = path.join(import.meta.dirname, '..', 'scripts', 'runApiPlaywright.ts')
 
 // Runs the API runner against `targetsFile` and resolves with its exit code and everything it printed.
 const runApiRunner = (
   targetsFile: string,
   args: readonly string[] = []
 ): Promise<{ code: number; output: string }> =>
-  runNodeScript([RUNNER, 'demo', ...args], { [TARGETS_FILE_VARIABLE]: targetsFile })
+  runPlaywrightRunner('runApiPlaywright.ts', targetsFile, ['demo', ...args])
 
 void test('a run that stops before its tests start still shuts the demo API down', async () => {
   const port = await findFreePort()

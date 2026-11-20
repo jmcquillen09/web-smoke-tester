@@ -1,0 +1,2 @@
+# A hook with CRLF line endings does not run: its interpreter line names "sh".
+/hooks/* text eol=lf
