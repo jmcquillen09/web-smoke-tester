@@ -393,4 +393,5 @@ it returns, run it from an isolated spec with `runIsolated`, and add its row to
 `npm test` runs the unit tests under [`tests/`](../tests) on Node's test runner, with no browser and
 no live site: target resolution, the targets file, browser choices, link extraction, the crawl's
 order and limits, the stage runners and the uncaught-error check.
-`npm run typecheck` typechecks everything Node runs.
+`npm run typecheck` typechecks everything Node runs, and `npm run lint` runs the ESLint rules
+[`eslint.config.mjs`](../eslint.config.mjs) enables over the same files.
