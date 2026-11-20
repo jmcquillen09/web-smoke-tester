@@ -39,7 +39,7 @@ void test('a run that stops before its tests start still shuts the demo API down
 
   assert.equal(run.code, 1)
   assert.match(run.output, /the demo API is running at/)
-  assert.match(run.output, /The demo target has no OpenAPI 3 JSON document at/)
+  assert.match(run.output, /The demo target has no OpenAPI or Swagger document at/)
   assert.match(run.output, /the demo API has shut down/)
   const next = await startDemoServer(demoApi, port, HOST)
   await stopDemoServer(demoApi, next)

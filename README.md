@@ -27,9 +27,10 @@ follow a link and come back.
 
 ## API checks
 
-`npm run test:api-playwright [target]` tests a site's API from the OpenAPI document it publishes.
-The runner finds the document (a target's `apiSpecPath`, or the usual addresses such as
-`/openapi.json` and `/v3/api-docs`), plans one request per `GET` operation from the document's own
+`npm run test:api-playwright [target]` tests a site's API from the OpenAPI document it publishes:
+OpenAPI 3 or Swagger 2.0, in JSON. The runner finds the document (a target's `apiSpecPath`,
+or the usual addresses such as `/openapi.json` and `/v3/api-docs`, or the one a Swagger UI or Redoc
+page such as `/docs` names), plans one request per `GET` operation from the document's own
 example values (a path parameter without one takes a value from the list operation one level up),
 and checks each answer:
 

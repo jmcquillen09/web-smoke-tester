@@ -24,6 +24,6 @@ export const discoverOpenApiDocument = async (
     if (hasDocument) return discovered
   }
   throw new E2eApiDocumentError(
-    `The ${settings.target} target has no OpenAPI 3 JSON document at: ${urls.join(', ')}. Set the target's "apiSpecPath" to where it is.`
+    `The ${settings.target} target has no OpenAPI or Swagger document at: ${urls.join(', ')}. Set the target's "apiSpecPath" to where it is.`
   )
 }

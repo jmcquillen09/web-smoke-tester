@@ -34,15 +34,25 @@ export const SITE_PAGES_VARIABLE = 'E2E_SITE_PAGES'
 export const API_OPERATIONS_FILE_VARIABLE = 'E2E_API_OPERATIONS_FILE'
 export const API_PROJECT = 'api'
 
-// Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`.
+// Where a site's OpenAPI document is looked for, in order, unless the target sets `apiSpecPath`:
+// the usual addresses of a document, then of a Swagger UI or Redoc page.
 export const OPENAPI_DOCUMENT_PATHS: readonly string[] = [
   '/openapi.json',
   '/swagger.json',
   '/v3/api-docs',
   '/api-docs',
   '/api/openapi.json',
-  '/swagger/v1/swagger.json'
+  '/swagger/v1/swagger.json',
+  '/v2/api-docs',
+  '/docs',
+  '/redoc',
+  '/swagger',
+  '/api/docs'
 ]
+// How many addresses one Swagger UI or Redoc page may send the runner to, and how many such steps
+// lead from a page to its document (the page, then the script that holds its settings).
+export const DOCS_PAGE_LINK_LIMIT = 5
+export const DOCS_PAGE_FOLLOW_LIMIT = 2
 // What the report shows on an API test the target's `expectedApiFailures` names.
 export const EXPECTED_API_FAILURE =
   'the target expects this check to fail on this operation (expectedApiFailures in targets.json)'

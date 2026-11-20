@@ -19,7 +19,7 @@ const E2eTargetDefinitionSchema = z
       .object({ width: z.number().int().positive(), height: z.number().int().positive() })
       .strict()
       .optional(),
-    /** Where the site's OpenAPI 3 JSON document is, as a path from the site's root; the usual addresses are tried when absent. */
+    /** Where the site's OpenAPI or Swagger document is, or the docs page that shows it, as a path from the site's root; the usual addresses are tried when absent. */
     apiSpecPath: z.string().optional(),
     /** Whether a run serves the bundled demo API at `baseUrl` for the length of the run; false when absent. */
     servesDemoApi: z.boolean().optional(),
