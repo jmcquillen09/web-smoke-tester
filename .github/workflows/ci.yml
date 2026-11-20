@@ -14,6 +14,7 @@ permissions:
   contents: read
   packages: read
 
+# Each setup step is written once, anchored where a job first uses it; later jobs reference it.
 jobs:
   checks:
     name: Checks (${{ matrix.os }})
@@ -25,18 +26,24 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # The duplication check compares against origin/main, which a shallow checkout lacks.
+          fetch-depth: 0
+      - &setup-node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
           registry-url: https://npm.pkg.github.com
           scope: '@studnicky'
       # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
-      - run: npm ci
+      - &install-dependencies
+        run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run duplication
       # Windows checks files out with CRLF line endings, which Prettier reports on every file.
       - if: runner.os == 'Linux'
         run: npm run format:check
@@ -47,17 +54,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          registry-url: https://npm.pkg.github.com
-          scope: '@studnicky'
-      # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
-      - run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - *setup-node
+      - *install-dependencies
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e-playwright -- demo-site --browser=chrome,firefox,safari
       - if: ${{ !cancelled() }}
@@ -77,17 +77,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          registry-url: https://npm.pkg.github.com
-          scope: '@studnicky'
-      # @studnicky/eslint-config installs from GitHub Packages, which refuses an unauthenticated read.
-      - run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - *checkout
+      - *setup-node
+      - *install-dependencies
       - env:
           CI_JOBS: ${{ toJSON(needs) }}
         run: node scripts/ciGate.ts

@@ -14,8 +14,11 @@
     "test": "node scripts/test.ts",
     "typecheck": "node scripts/typecheck.ts",
     "lint": "eslint .",
+    "duplication": "jscpd . --baseline-from-ref origin/main --fail-on-new-clones",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "setup-hooks": "git config core.hooksPath hooks",
+    "prepare": "npm run setup-hooks"
   },
   "dependencies": {
     "ajv": "8.20.0",
@@ -33,6 +36,7 @@
     "eslint-plugin-perfectionist": "^5.14.0",
     "eslint-plugin-regexp": "^3.3.3",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "jscpd": "5.4.3",
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.73.0"

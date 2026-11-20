@@ -18,6 +18,8 @@ Official upstream documentation for primary project dependencies.
 - TypeScript: https://www.typescriptlang.org/docs/
 - Node.js, including running TypeScript directly: https://nodejs.org/en/docs/
 - Prettier: https://prettier.io/docs/
+- jscpd (`npm run duplication`, configured in `.jscpd.json`; the same version serves the `jscpd` MCP
+  server): https://www.npmjs.com/package/jscpd
 - ESLint (`npm run lint`, configured in `eslint.config.mjs`): https://eslint.org/docs/latest/
   - `@studnicky/eslint-config` (the rules `eslint.config.mjs` enables; installs from GitHub Packages through
     `.npmrc`): https://studnicky.github.io/substrate/packages/eslint-config
